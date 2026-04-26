@@ -1,174 +1,169 @@
 import vk_api
-from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 import json
 import os
 import random
 from datetime import datetime
+from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 
-# =======================
+# =========================
 # НАСТРОЙКИ
-# =======================
+# =========================
 TOKEN = "vk1.a.gvt4eMCrtK9Nfl_6mH_xFQA2MVuJYHFMabOi3q-eB6nGEXCZtDUi5LvyQQF0TBrKN7mfxkPtGSQxrTUlUTJk97CGYv0NwsahZx8Hv_MbSizZoMTmuwwrOEaisQBcZZnBLs5T-fgQNyf0oyWJDGRskMMZ3jPKvLx6bX05nekBoEU8EmaYpYVLoeWiYTFdm5_eUNBjndOzIYyejCR5QyJO2A"
-GROUP_ID = 238116016   # ВСТАВЬ ID ГРУППЫ
+GROUP_ID = 238116016
 ADMIN_ID = 547053039
 
 DATA_FILE = "mods.json"
 
-# =======================
-# VK INIT
-# =======================
+# =========================
+# ПОДКЛЮЧЕНИЕ
+# =========================
 vk_session = vk_api.VkApi(token=TOKEN)
 vk = vk_session.get_api()
 longpoll = VkBotLongPoll(vk_session, GROUP_ID)
 
-# =======================
-# DATA
-# =======================
-def load():
+
+# =========================
+# БАЗА
+# =========================
+def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
-def save(data):
+def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-mods = load()
+mods = load_data()
 
-# =======================
-# SEND
-# =======================
-def send(uid, text):
+
+# =========================
+# ВСПОМОГАТЕЛЬНОЕ
+# =========================
+def send(user_id, text):
     vk.messages.send(
-        user_id=uid,
+        user_id=user_id,
         message=text,
         random_id=random.randint(1, 999999999)
     )
 
-# =======================
-# CREATE MOD
-# =======================
 def create_mod(uid):
     uid = str(uid)
-
     if uid not in mods:
         mods[uid] = {
             "nick": f"id{uid}",
             "age": "18",
-            "timezone": "МСК +0",
-            "rank": "Модератор",
+            "timezone": "МСК",
+            "role": "Модератор",
             "post": "Не указана",
-            "date": datetime.now().strftime("%d.%m.%Y"),
-            "points": 0,
+            "set_date": datetime.now().strftime("%d.%m.%Y"),
+            "raise_date": datetime.now().strftime("%d.%m.%Y"),
+            "balls": 0,
             "warns": 0,
             "preds": 0,
+            "mutes": 0,
+            "inactive": 0,
+            "discord": "Не указан",
+            "forum": "Не указан",
             "telegram": "Не указан"
         }
-        save(mods)
+        save_data(mods)
 
-# =======================
-# CARD
-# =======================
-def card(uid):
+def profile(uid):
     uid = str(uid)
-
     if uid not in mods:
-        return "❌ Пользователь не найден"
+        return "❌ Модератор не найден"
 
     m = mods[uid]
 
-    return f"""🎲 Статистика администратора
+    text = f"""🎲 Статистика администратора
 
 🟩 Игровой Ник/VK: {m['nick']}
 🟩 Возраст: {m['age']}
-🟩 Часовой пояс: {m['timezone']}
-🟩 Уровень прав: {m['rank']}
+🟩 Час пояс: {m['timezone']}
+🟩 Уровень прав: {m['role']}
 🟩 Должность: {m['post']}
 
-✳ Поставлен: {m['date']}
+✳️ Поставлен: {m['set_date']}
+✳️ Последнее повышение: {m['raise_date']}
 
-🟪 Количество баллов: {m['points']}
+🟪 Количество баллов: {m['balls']}
 🟪 Количество выговоров: {m['warns']}
 🟪 Количество предов: {m['preds']}
+🟪 Количество мутов: {m['mutes']}
 
+🔲 Неактивов: {m['inactive']} дней
+
+🟧 Discord: {m['discord']}
+🟧 Форум: {m['forum']}
 🟧 Telegram: {m['telegram']}
-🟧 VK ID: {uid}
 """
+    return text
 
-# =======================
-# START
-# =======================
-print("Бот запущен")
+
+# =========================
+# КОМАНДЫ
+# =========================
+print("Бот запущен.")
 
 for event in longpoll.listen():
 
     if event.type == VkBotEventType.MESSAGE_NEW:
+        msg = event.object["message"]["text"]
+        user_id = event.object["message"]["from_id"]
 
-        msg = event.object["message"]
-        uid = msg["from_id"]
-        text = msg["text"].strip()
+        args = msg.split()
+        cmd = args[0].lower()
 
-        # обычный пользователь
-        if text.lower() == "/стата":
+        # старт
+        if cmd == "/start":
+            send(user_id, "✅ Бот работает.\nКоманды:\n/addmod ID\n/profile ID")
+
+        # добавить модератора
+        elif cmd == "/addmod":
+            if user_id != ADMIN_ID:
+                send(user_id, "❌ Нет доступа")
+                continue
+
+            if len(args) < 2:
+                send(user_id, "Используй: /addmod ID")
+                continue
+
+            uid = args[1]
             create_mod(uid)
-            send(uid, card(uid))
+            send(user_id, f"✅ Модератор {uid} добавлен")
 
-        # админ команды
-        if uid == ADMIN_ID:
+        # профиль
+        elif cmd == "/profile":
+            if len(args) < 2:
+                uid = user_id
+            else:
+                uid = args[1]
 
-            if text.startswith("/addmod"):
-                try:
-                    target = text.split()[1]
-                    create_mod(target)
-                    send(uid, "✅ Модератор добавлен")
-                except:
-                    send(uid, "Используй: /addmod ID")
+            send(user_id, profile(uid))
 
-            elif text.startswith("/setnick"):
-                try:
-                    arr = text.split(maxsplit=2)
-                    target = arr[1]
-                    val = arr[2]
-                    create_mod(target)
-                    mods[str(target)]["nick"] = val
-                    save(mods)
-                    send(uid, "✅ Ник изменен")
-                except:
-                    send(uid, "Используй: /setnick ID Ник")
+        # изменить поле
+        elif cmd == "/set":
+            if user_id != ADMIN_ID:
+                send(user_id, "❌ Нет доступа")
+                continue
 
-            elif text.startswith("/setpoints"):
-                try:
-                    arr = text.split()
-                    target = arr[1]
-                    val = int(arr[2])
-                    create_mod(target)
-                    mods[str(target)]["points"] = val
-                    save(mods)
-                    send(uid, "✅ Баллы изменены")
-                except:
-                    send(uid, "Используй: /setpoints ID 100")
+            if len(args) < 4:
+                send(user_id, "/set ID поле значение")
+                continue
 
-            elif text.startswith("/setrank"):
-                try:
-                    arr = text.split(maxsplit=2)
-                    target = arr[1]
-                    val = arr[2]
-                    create_mod(target)
-                    mods[str(target)]["rank"] = val
-                    save(mods)
-                    send(uid, "✅ Ранг изменен")
-                except:
-                    send(uid, "Используй: /setrank ID Старший")
+            uid = args[1]
+            field = args[2]
+            value = " ".join(args[3:])
 
-            elif text.startswith("/setage"):
-                try:
-                    arr = text.split()
-                    target = arr[1]
-                    val = arr[2]
-                    create_mod(target)
-                    mods[str(target)]["age"] = val
-                    save(mods)
-                    send(uid, "✅ Возраст изменен")
-                except:
-                    send(uid, "Используй: /setage ID 18")
+            if uid not in mods:
+                send(user_id, "❌ Нет такого модератора")
+                continue
+
+            if field in mods[uid]:
+                mods[uid][field] = value
+                save_data(mods)
+                send(user_id, "✅ Обновлено")
+            else:
+                send(user_id, "❌ Нет такого поля")
