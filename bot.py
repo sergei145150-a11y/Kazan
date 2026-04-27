@@ -251,6 +251,22 @@ for event in longpoll.listen():
     uid = event.object.message["from_id"]
     peer_id = event.object.message["peer_id"]
 
+    if peer_id != uid:
+
+        # убираем упоминание [club123|Test]
+        if "]" in msg and msg.startswith("["):
+            msg = msg.split("]", 1)[1].strip()
+
+        # если написали Test ...
+        elif msg.lower().startswith("test "):
+            msg = msg[5:].strip()
+
+        # если не команда — игнор
+        elif not msg.startswith("/"):
+            continue
+
+    low = msg.lower()
+
         # ======================
         # STATES
         # ======================
