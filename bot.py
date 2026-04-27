@@ -244,12 +244,12 @@ print("V3 SQLite запущен")
 
 for event in longpoll.listen():
 
-    if event.type == VkBotEventType.MESSAGE_NEW:
+    if event.type != VkBotEventType.MESSAGE_NEW:
+        continue
 
-        msg = event.object.message["text"].strip()
-        uid = event.object.message["from_id"]
-        peer_id = event.object.message["peer_id"]
-        low = msg.lower()
+    msg = event.object.message["text"].strip()
+    uid = event.object.message["from_id"]
+    peer_id = event.object.message["peer_id"]
 
         # ======================
         # STATES
