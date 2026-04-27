@@ -279,12 +279,10 @@ for event in longpoll.listen():
 """,
                 menu(uid))
             continue
-з
         # ===================
         # STATES
         # ===================
         if uid in states:
-
             if states[uid] == "raise":
                 send(
                     ADMIN_ID,
