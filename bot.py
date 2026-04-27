@@ -1,6 +1,7 @@
 # V2.5 SMART STAFF PANEL
 # bot.py
 
+import sqlite3
 import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
@@ -13,7 +14,50 @@ TOKEN = "vk1.a.gvt4eMCrtK9Nfl_6mH_xFQA2MVuJYHFMabOi3q-eB6nGEXCZtDUi5LvyQQF0TBrKN
 GROUP_ID = 238116016
 ADMIN_ID = 547053039
 DATA_FILE = "mods.json"
+db = sqlite3.connect("database.db", check_same_thread=False)
+sql = db.cursor()
+sql.execute("""
+CREATE TABLE IF NOT EXISTS moderators (
+    uid INTEGER PRIMARY KEY,
+    nick TEXT,
+    rank TEXT,
+    coins INTEGER,
+    name TEXT,
+    age TEXT,
+    birthday TEXT,
+    timezone TEXT,
+    pc TEXT,
+    warns INTEGER,
+    vigovors INTEGER,
+    discord TEXT,
+    forum TEXT,
+    telegram TEXT
+)
+""")
+db.commit()
+def add_mod(uid, nick):
+    sql.execute("""
+        INSERT OR REPLACE INTO moderators
+        (uid, nick, rank, coins, warns, vigovors)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (uid, nick, "Модератор", 0, 0, 0))
+    db.commit()
 
+
+def get_mod(uid):
+    sql.execute("SELECT * FROM moderators WHERE uid=?", (uid,))
+    return sql.fetchone()
+
+
+def del_mod(uid):
+    sql.execute("DELETE FROM moderators WHERE uid=?", (uid,))
+    db.commit()
+
+
+def is_mod(uid):
+    sql.execute("SELECT uid FROM moderators WHERE uid=?", (uid,))
+    return sql.fetchone() is not None
+    
 vk_session = vk_api.VkApi(token=TOKEN)
 vk = vk_session.get_api()
 longpoll = VkBotLongPoll(vk_session, GROUP_ID)
