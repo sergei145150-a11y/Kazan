@@ -148,8 +148,8 @@ for event in longpoll.listen():
         # =====================
         # АДМИНКА
         # =====================
-elif cmd == "/addmod":
-    if not is_admin(user_id):
+        elif cmd == "/addmod":
+           if not is_admin(user_id):
         send(user_id, "❌ У вас нет доступа.")
         continue
 
