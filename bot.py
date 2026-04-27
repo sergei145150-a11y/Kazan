@@ -271,13 +271,13 @@ for event in longpoll.listen():
         # STATES
         # ======================
 
-        if uid in states:
+    if uid in states:
 
-            step = states[uid]["step"]
+        step = states[uid]["step"]
 
-            if step == "raise":
+        if step == "raise":
 
-                send(
+            send(
                     ADMIN_ID,
                     f"📩 Заявка на повышение\n\nОт: {uid}\nПричина: {msg}"
                 )
@@ -327,7 +327,7 @@ for event in longpoll.listen():
         # BUTTONS
         # ======================
 
-        if low == "📋 профиль":
+    if low == "📋 профиль":
             send(peer_id, profile(uid), menu())
             continue
 
