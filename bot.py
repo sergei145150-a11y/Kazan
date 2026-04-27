@@ -1,3 +1,6 @@
+# V2 STAFF PANEL BOT
+# ГОТОВЫЙ bot.py
+
 import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
@@ -6,15 +9,20 @@ import os
 import random
 from datetime import datetime
 
+# =========================
+# НАСТРОЙКИ
+# =========================
 TOKEN = "vk1.a.gvt4eMCrtK9Nfl_6mH_xFQA2MVuJYHFMabOi3q-eB6nGEXCZtDUi5LvyQQF0TBrKN7mfxkPtGSQxrTUlUTJk97CGYv0NwsahZx8Hv_MbSizZoMTmuwwrOEaisQBcZZnBLs5T-fgQNyf0oyWJDGRskMMZ3jPKvLx6bX05nekBoEU8EmaYpYVLoeWiYTFdm5_eUNBjndOzIYyejCR5QyJO2A"
 GROUP_ID = 238116016
 ADMIN_ID = 547053039
 DATA_FILE = "mods.json"
 
+# =========================
+# ПОДКЛЮЧЕНИЕ
+# =========================
 vk_session = vk_api.VkApi(token=TOKEN)
 vk = vk_session.get_api()
 longpoll = VkBotLongPoll(vk_session, GROUP_ID)
-
 
 # =========================
 # БАЗА
@@ -30,247 +38,248 @@ def save_data(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 mods = load_data()
-
-
-# =========================
-# КНОПКИ
-# =========================
-def get_keyboard(uid):
-    keyboard = VkKeyboard(one_time=False)
-
-    keyboard.add_button("📋 Профиль", color=VkKeyboardColor.PRIMARY)
-    keyboard.add_button("🆔 ID", color=VkKeyboardColor.SECONDARY)
-    keyboard.add_line()
-
-    keyboard.add_button("📚 Помощь", color=VkKeyboardColor.POSITIVE)
-
-    if uid == ADMIN_ID:
-        keyboard.add_line()
-        keyboard.add_button("👑 Админка", color=VkKeyboardColor.NEGATIVE)
-
-    return keyboard.get_keyboard()
-
+states = {}
 
 # =========================
-# ОТПРАВКА
-# =========================
-def send(uid, text):
-    vk.messages.send(
-        user_id=uid,
-        message=text,
-        random_id=random.randint(1, 999999999),
-        keyboard=get_keyboard(uid)
-    )
-
-
-# =========================
-# ЛОГИКА
+# ФУНКЦИИ
 # =========================
 def is_admin(uid):
     return uid == ADMIN_ID
 
-def create_mod(uid, nick="Отсутствует"):
-    uid = str(uid)
+def send(uid, text, keyboard=None):
+    vk.messages.send(
+        user_id=uid,
+        message=text,
+        random_id=random.randint(1, 999999999),
+        keyboard=keyboard
+    )
 
+def create_mod(uid, nick="Не указан"):
+    uid = str(uid)
     if uid not in mods:
         mods[uid] = {
             "nick": nick,
-            "age": "-",
-            "timezone": "-",
             "role": "Модератор",
-            "post": "-",
-            "set_date": datetime.now().strftime("%d.%m.%Y"),
-            "raise_date": "-",
             "balls": 0,
             "warns": 0,
             "preds": 0,
             "mutes": 0,
             "inactive": 0,
-            "discord": "-",
-            "forum": "-",
-            "telegram": "-"
+            "set_date": datetime.now().strftime("%d.%m.%Y")
         }
         save_data(mods)
 
+# =========================
+# КНОПКИ
+# =========================
+def menu(uid):
+    kb = VkKeyboard(one_time=False)
+
+    kb.add_button("📋 Профиль", VkKeyboardColor.PRIMARY)
+    kb.add_button("📊 Статистика", VkKeyboardColor.SECONDARY)
+    kb.add_line()
+
+    kb.add_button("📈 Повышение", VkKeyboardColor.POSITIVE)
+    kb.add_button("📷 Доказательства", VkKeyboardColor.PRIMARY)
+    kb.add_line()
+
+    kb.add_button("📝 Отчёт", VkKeyboardColor.SECONDARY)
+    kb.add_button("🏆 Карьера", VkKeyboardColor.POSITIVE)
+
+    if is_admin(uid):
+        kb.add_line()
+        kb.add_button("👑 Админка", VkKeyboardColor.NEGATIVE)
+
+    return kb.get_keyboard()
+
+# =========================
+# ПРОФИЛЬ
+# =========================
 def profile(uid):
     uid = str(uid)
 
     if uid not in mods:
-        return "❌ Профиль не найден."
+        return "❌ Вас нет в составе."
 
     m = mods[uid]
 
-    return f"""🎲 Профиль администратора
+    return f"""🎲 Профиль сотрудника
 
-🟩 Ник/VK: [id{uid}|{m['nick']}]
-🟩 Возраст: {m['age']}
-🟩 Часовой пояс: {m['timezone']}
-🟩 Уровень прав: {m['role']}
-🟩 Должность: {m['post']}
-
-✳️ Поставлен: {m['set_date']}
-✳️ Повышен: {m['raise_date']}
-
+🟩 Ник: [id{uid}|{m['nick']}]
+🟩 Должность: {m['role']}
 🟪 Баллы: {m['balls']}
 🟪 Выговоры: {m['warns']}
 🟪 Преды: {m['preds']}
 🟪 Муты: {m['mutes']}
-
 🔲 Неактив: {m['inactive']} дней
 
-🟧 Discord: {m['discord']}
-🟧 Форум: {m['forum']}
-🟧 Telegram: {m['telegram']}
+📅 Назначен: {m['set_date']}
 """
 
-
-print("Бот запущен.")
-
+# =========================
+# СТАРТ
+# =========================
+print("V2 Бот запущен")
 
 # =========================
 # LONGPOLL
 # =========================
 for event in longpoll.listen():
     if event.type == VkBotEventType.MESSAGE_NEW:
+
         msg = event.object.message["text"].strip()
-        user_id = event.object.message["from_id"]
+        uid = event.object.message["from_id"]
+        lower = msg.lower()
 
-        text = msg.lower()
+        # =====================
+        # STATE MODE
+        # =====================
+        if uid in states:
 
+            if states[uid] == "raise":
+                send(
+                    ADMIN_ID,
+                    f"📩 Заявка на повышение\n\n👤 [id{uid}|Пользователь]\n📝 {msg}"
+                )
+                send(uid, "✅ Заявка отправлена.", menu(uid))
+                del states[uid]
+                continue
+
+            elif states[uid] == "report":
+                send(
+                    ADMIN_ID,
+                    f"📝 Новый отчёт\n\n👤 [id{uid}|Пользователь]\n📄 {msg}"
+                )
+                send(uid, "✅ Отчёт отправлен.", menu(uid))
+                del states[uid]
+                continue
+
+        # =====================
         # КНОПКИ
-        if text == "📋 профиль":
-            send(user_id, profile(user_id))
+        # =====================
+        if lower == "📋 профиль":
+            send(uid, profile(uid), menu(uid))
             continue
 
-        elif text == "🆔 id":
-            send(user_id, f"Ваш ID: {user_id}")
+        elif lower == "📊 статистика":
+            send(uid, profile(uid), menu(uid))
             continue
 
-        elif text == "📚 помощь":
-            send(user_id,
-"""📌 Команды:
+        elif lower == "📈 повышение":
+            states[uid] = "raise"
+            send(uid, "✍ Напишите заявку на повышение:", menu(uid))
+            continue
 
-/profile [id]
-/id
+        elif lower == "📷 доказательства":
+            send(uid, "📷 Отправьте фото одним сообщением с подписью.", menu(uid))
+            continue
 
-Админ:
+        elif lower == "📝 отчёт":
+            states[uid] = "report"
+            send(uid, "✍ Напишите отчёт за день:", menu(uid))
+            continue
+
+        elif lower == "🏆 карьера":
+            send(uid,
+"""🏆 Карьерная лестница:
+
+1. Стажёр
+2. Модератор
+3. Старший модератор
+4. Куратор
+5. Заместитель
+6. Руководитель""",
+            menu(uid))
+            continue
+
+        elif lower == "👑 админка":
+            if is_admin(uid):
+                send(uid,
+"""👑 Админ команды:
+
 /addmod ссылка ник
 /delmod id
 /mods
 /set id поле значение
-""")
-            continue
-
-        elif text == "👑 админка":
-            if is_admin(user_id):
-                send(user_id,
-"""👑 Админ панель:
-
-/addmod ссылка ник
-/delmod id
-/mods
-/set id поле значение
-""")
+""",
+                menu(uid))
             else:
-                send(user_id, "❌ Нет доступа.")
+                send(uid, "❌ Нет доступа.", menu(uid))
             continue
 
-        # СЛЕШ КОМАНДЫ
+        # =====================
+        # КОМАНДЫ
+        # =====================
         if not msg.startswith("/"):
             continue
 
         args = msg.split()
         cmd = args[0].lower()
 
-        if cmd == "/id":
-            send(user_id, f"Ваш ID: {user_id}")
-
-        elif cmd == "/profile":
-            uid = user_id
-            if len(args) >= 2:
-                uid = args[1]
-            send(user_id, profile(uid))
+        if cmd == "/start":
+            send(uid, "✅ STAFF PANEL V2 активирован.", menu(uid))
 
         elif cmd == "/addmod":
-            if not is_admin(user_id):
-                send(user_id, "❌ Нет доступа.")
+            if not is_admin(uid):
                 continue
 
             parts = msg.split(maxsplit=2)
 
             if len(parts) < 3:
-                send(user_id, "Использование:\n/addmod ссылка ник")
+                send(uid, "/addmod ссылка ник")
                 continue
 
             raw = parts[1]
             nick = parts[2]
 
-            uid = raw.replace("https://vk.com/id", "")
-            uid = uid.replace("vk.com/id", "")
-            uid = uid.replace("id", "")
+            new_uid = raw.replace("https://vk.com/id", "")
+            new_uid = new_uid.replace("vk.com/id", "")
+            new_uid = new_uid.replace("id", "")
 
-            if not uid.isdigit():
-                send(user_id, "❌ Неверная ссылка.")
+            if not new_uid.isdigit():
+                send(uid, "❌ Ошибка ссылки.")
                 continue
 
-            create_mod(uid, nick)
-            send(user_id, f"✅ Модератор {nick} добавлен.")
+            create_mod(new_uid, nick)
+            send(uid, f"✅ {nick} добавлен.", menu(uid))
+
+        elif cmd == "/mods":
+            if not is_admin(uid):
+                continue
+
+            text = "👥 Состав:\n\n"
+
+            for x in mods:
+                text += f"[id{x}|{mods[x]['nick']}]\n"
+
+            send(uid, text, menu(uid))
 
         elif cmd == "/delmod":
-            if not is_admin(user_id):
-                send(user_id, "❌ Нет доступа.")
+            if not is_admin(uid):
                 continue
 
             if len(args) < 2:
                 continue
 
-            uid = args[1]
+            x = args[1]
 
-            if uid in mods:
-                del mods[uid]
+            if x in mods:
+                del mods[x]
                 save_data(mods)
-                send(user_id, "✅ Удалён.")
-            else:
-                send(user_id, "❌ Не найден.")
-
-        elif cmd == "/mods":
-            if not is_admin(user_id):
-                send(user_id, "❌ Нет доступа.")
-                continue
-
-            if not mods:
-                send(user_id, "Список пуст.")
-                continue
-
-            txt = "📋 Модераторы:\n\n"
-
-            for uid in mods:
-                txt += f"[id{uid}|{mods[uid]['nick']}]\n"
-
-            send(user_id, txt)
+                send(uid, "✅ Удалён.", menu(uid))
 
         elif cmd == "/set":
-            if not is_admin(user_id):
-                send(user_id, "❌ Нет доступа.")
+            if not is_admin(uid):
                 continue
 
             if len(args) < 4:
-                send(user_id, "/set id поле значение")
                 continue
 
-            uid = args[1]
+            x = args[1]
             field = args[2]
             value = " ".join(args[3:])
 
-            if uid not in mods:
-                send(user_id, "❌ Не найден.")
-                continue
-
-            if field not in mods[uid]:
-                send(user_id, "❌ Нет поля.")
-                continue
-
-            mods[uid][field] = value
-            save_data(mods)
-
-            send(user_id, "✅ Обновлено.")
+            if x in mods and field in mods[x]:
+                mods[x][field] = value
+                save_data(mods)
+                send(uid, "✅ Изменено.", menu(uid))
