@@ -63,11 +63,11 @@ states = {}
 # FUNCTIONS
 # ==========================
 
-def send(uid, text, keyboard=None):
+def send(peer_id, text, keyboard=None):
     vk.messages.send(
-        user_id=uid,
-        random_id=random.randint(1, 999999999),
+        peer_id=peer_id,
         message=text,
+        random_id=random.randint(1, 999999999),
         keyboard=keyboard
     )
 
@@ -248,6 +248,7 @@ for event in longpoll.listen():
 
         msg = event.object.message["text"].strip()
         uid = event.object.message["from_id"]
+        peer_id = event.object.message["peer_id"]
         low = msg.lower()
 
         # ======================
@@ -265,7 +266,7 @@ for event in longpoll.listen():
                     f"📩 Заявка на повышение\n\nОт: {uid}\nПричина: {msg}"
                 )
 
-                send(uid, "✅ Заявка отправлена.")
+                send(peer_id, "✅ Заявка отправлена.")
                 del states[uid]
                 continue
 
@@ -274,13 +275,13 @@ for event in longpoll.listen():
                 target = find_user(msg)
 
                 if not target:
-                    send(uid, "❌ Пользователь не найден.")
+                    send(peer_id, "❌ Пользователь не найден.")
                     continue
 
                 states[uid]["target"] = target
                 states[uid]["step"] = "set_field"
 
-                send(uid, "Введите поле:")
+                send(peer_id, "Введите поле:")
                 continue
 
             elif step == "set_field":
@@ -288,7 +289,7 @@ for event in longpoll.listen():
                 states[uid]["field"] = msg
                 states[uid]["step"] = "set_value"
 
-                send(uid, "Введите значение:")
+                send(peer_id, "Введите значение:")
                 continue
 
             elif step == "set_value":
@@ -299,9 +300,9 @@ for event in longpoll.listen():
                 ok = update_field(target, field, msg)
 
                 if ok:
-                    send(uid, "✅ Данные изменены.")
+                    send(peer_id, "✅ Данные изменены.")
                 else:
-                    send(uid, "❌ Поле не найдено.")
+                    send(peer_id, "❌ Поле не найдено.")
 
                 del states[uid]
                 continue
@@ -311,16 +312,16 @@ for event in longpoll.listen():
         # ======================
 
         if low == "📋 профиль":
-            send(uid, profile(uid), menu())
+            send(peer_id, profile(uid), menu())
             continue
 
         elif low == "📈 повышение":
             states[uid] = {"step":"raise"}
-            send(uid, "✍ Напишите причину заявки:")
+            send(peer_id, "✍ Напишите причину заявки:")
             continue
 
         elif low == "📷 доказательства":
-            send(uid, "📷 Отправьте доказательства администрации.", menu())
+            send(peer_id, "📷 Отправьте доказательства администрации.", menu())
             continue
 
         elif low == "👑 админка":
@@ -328,7 +329,7 @@ for event in longpoll.listen():
             if not is_admin(uid):
                 continue
 
-            send(uid,
+            send(peer_id,
 """👑 Админ-команды
 
 /addmod ссылка ник
@@ -350,7 +351,7 @@ for event in longpoll.listen():
             for x in rows:
                 text += f"[id{x[0]}|{x[1]}] — {x[2]}\n"
 
-            send(uid, text, admin_kb())
+            send(peer_id, text, admin_kb())
             continue
 
         elif low == "✏ изменить данные":
@@ -360,7 +361,7 @@ for event in longpoll.listen():
 
             states[uid] = {"step":"set_uid"}
 
-            send(uid, "Введите ссылку / ID / ник:", admin_kb())
+            send(peer_id, "Введите ссылку / ID / ник:", admin_kb())
             continue
 
         # ======================
@@ -374,7 +375,7 @@ for event in longpoll.listen():
         cmd = args[0].lower()
 
         if cmd == "/start":
-            send(uid, "✅ Панель активирована.", menu())
+            send(peer_id, "✅ Панель активирована.", menu())
 
         elif cmd == "/addmod":
 
@@ -382,20 +383,20 @@ for event in longpoll.listen():
                 continue
 
             if len(args) < 3:
-                send(uid, "/addmod ссылка ник")
+                send(peer_id, "/addmod ссылка ник")
                 continue
 
             target = find_user(args[1])
 
             if not target:
-                send(uid, "❌ Пользователь не найден.")
+                send(peer_id, "❌ Пользователь не найден.")
                 continue
 
             nick = " ".join(args[2:])
 
             add_mod(target, nick)
 
-            send(uid, "✅ Модератор добавлен.")
+            send(peer_id, "✅ Модератор добавлен.")
 
         elif cmd == "/delmod":
 
@@ -408,12 +409,12 @@ for event in longpoll.listen():
             target = find_user(args[1])
 
             if not target:
-                send(uid, "❌ Пользователь не найден.")
+                send(peer_id, "❌ Пользователь не найден.")
                 continue
 
             del_mod(target)
 
-            send(uid, "✅ Модератор удалён.")
+            send(peer_id, "✅ Модератор удалён.")
 
         elif cmd == "/mods":
 
@@ -424,7 +425,7 @@ for event in longpoll.listen():
             for x in rows:
                 text += f"[id{x[0]}|{x[1]}] — {x[2]}\n"
 
-            send(uid, text)
+            send(peer_id, text)
 
         elif cmd == "/set":
 
@@ -433,4 +434,4 @@ for event in longpoll.listen():
 
             states[uid] = {"step":"set_uid"}
 
-            send(uid, "Введите ссылку / ID / ник:")
+            send(peer_id, "Введите ссылку / ID / ник:")
