@@ -1,353 +1,295 @@
-# V2.5 SMART STAFF PANEL
-# bot.py
 
-import sqlite3
+# bot.py
+# V3 SQLite VK Moderator Bot
+
 import vk_api
+import sqlite3
+import random
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
-import json
-import os
-import random
-from datetime import datetime
+
+# =========================
+# CONFIG
+# =========================
 
 TOKEN = "vk1.a.gvt4eMCrtK9Nfl_6mH_xFQA2MVuJYHFMabOi3q-eB6nGEXCZtDUi5LvyQQF0TBrKN7mfxkPtGSQxrTUlUTJk97CGYv0NwsahZx8Hv_MbSizZoMTmuwwrOEaisQBcZZnBLs5T-fgQNyf0oyWJDGRskMMZ3jPKvLx6bX05nekBoEU8EmaYpYVLoeWiYTFdm5_eUNBjndOzIYyejCR5QyJO2A"
 GROUP_ID = 238116016
 ADMIN_ID = 547053039
-DATA_FILE = "mods.json"
+
+# =========================
+# DATABASE
+# =========================
+
 db = sqlite3.connect("database.db", check_same_thread=False)
 sql = db.cursor()
+
 sql.execute("""
 CREATE TABLE IF NOT EXISTS moderators (
     uid INTEGER PRIMARY KEY,
     nick TEXT,
     rank TEXT,
     coins INTEGER,
+    warns INTEGER,
+    vigovors INTEGER,
     name TEXT,
     age TEXT,
     birthday TEXT,
     timezone TEXT,
     pc TEXT,
-    warns INTEGER,
-    vigovors INTEGER,
     discord TEXT,
     forum TEXT,
     telegram TEXT
 )
 """)
+
 db.commit()
+
+# =========================
+# VK
+# =========================
+
+vk_session = vk_api.VkApi(token=TOKEN)
+vk = vk_session.get_api()
+longpoll = VkBotLongPoll(vk_session, GROUP_ID)
+
+# =========================
+# MEMORY
+# =========================
+
+states = {}
+
+# =========================
+# FUNCTIONS
+# =========================
+
+def send(uid, text, keyboard=None):
+    vk.messages.send(
+        user_id=uid,
+        random_id=random.randint(1, 999999999),
+        message=text,
+        keyboard=keyboard
+    )
+
+def is_admin(uid):
+    return uid == ADMIN_ID
+
 def add_mod(uid, nick):
     sql.execute("""
-        INSERT OR REPLACE INTO moderators
-        (uid, nick, rank, coins, warns, vigovors)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (uid, nick, "Модератор", 0, 0, 0))
+    INSERT OR REPLACE INTO moderators
+    (uid, nick, rank, coins, warns, vigovors,
+    name, age, birthday, timezone, pc,
+    discord, forum, telegram)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        uid,
+        nick,
+        "Модератор",
+        0,
+        0,
+        0,
+        "Не указано",
+        "Не указано",
+        "Не указано",
+        "Не указано",
+        "Нет",
+        "Не указано",
+        "Не указано",
+        "Не указано"
+    ))
     db.commit()
-
-
-def get_mod(uid):
-    sql.execute("SELECT * FROM moderators WHERE uid=?", (uid,))
-    return sql.fetchone()
-
 
 def del_mod(uid):
     sql.execute("DELETE FROM moderators WHERE uid=?", (uid,))
     db.commit()
 
+def get_mod(uid):
+    sql.execute("SELECT * FROM moderators WHERE uid=?", (uid,))
+    return sql.fetchone()
 
-def is_mod(uid):
-    sql.execute("SELECT uid FROM moderators WHERE uid=?", (uid,))
-    return sql.fetchone() is not None
-    
-vk_session = vk_api.VkApi(token=TOKEN)
-vk = vk_session.get_api()
-longpoll = VkBotLongPoll(vk_session, GROUP_ID)
+def get_all_mods():
+    sql.execute("SELECT uid,nick,rank FROM moderators")
+    return sql.fetchall()
 
-# =======================
-# DATA
-# =======================
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+def update_field(uid, field, value):
+    allowed = [
+        "nick","rank","coins","warns","vigovors",
+        "name","age","birthday","timezone","pc",
+        "discord","forum","telegram"
+    ]
 
-def save_data():
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(mods, f, ensure_ascii=False, indent=4)
+    if field not in allowed:
+        return False
 
-mods = load_data()
-states = {}
+    sql.execute(f"UPDATE moderators SET {field}=? WHERE uid=?", (value, uid))
+    db.commit()
+    return True
 
-# =======================
-# HELPERS
-# =======================
-def is_admin(uid):
-    return uid == ADMIN_ID
-
-def send(uid, text, keyboard=None):
-    vk.messages.send(
-        user_id=uid,
-        random_id=random.randint(1,999999999),
-        message=text,
-        keyboard=keyboard
-    )
-def admin_keyboard():
-    kb = VkKeyboard(one_time=False)
-
-    kb.add_button("📋 Список модеров", color=VkKeyboardColor.PRIMARY)
-    kb.add_button("✏ Изменить данные", color=VkKeyboardColor.POSITIVE)
-
-    kb.add_line()
-
-    kb.add_button("👤 Профиль", color=VkKeyboardColor.SECONDARY)
-
-    return kb.get_keyboard()
-
-def menu(uid):
+def menu():
     kb = VkKeyboard(one_time=False)
 
     kb.add_button("📋 Профиль", VkKeyboardColor.PRIMARY)
     kb.add_button("📈 Повышение", VkKeyboardColor.POSITIVE)
+
     kb.add_line()
 
-    kb.add_button("📷 Доказательства", VkKeyboardColor.PRIMARY)
-    kb.add_button("📝 Отчёт", VkKeyboardColor.SECONDARY)
-    kb.add_line()
-
-    kb.add_button("🏆 Карьера", VkKeyboardColor.SECONDARY)
-
-    if is_admin(uid):
-        kb.add_line()
-        kb.add_button("👑 Админка", VkKeyboardColor.NEGATIVE)
+    kb.add_button("📷 Доказательства", VkKeyboardColor.SECONDARY)
+    kb.add_button("👑 Админка", VkKeyboardColor.NEGATIVE)
 
     return kb.get_keyboard()
 
-def create_mod(uid, nick="Не указано"):
-    uid = str(uid)
+def admin_kb():
+    kb = VkKeyboard(one_time=False)
 
-    if uid not in mods:
-        mods[uid] = {
-            "nick": nick,
-            "post": "Не указано",
-            "coins": "Не указано",
+    kb.add_button("📄 Список модеров", VkKeyboardColor.PRIMARY)
+    kb.add_button("✏ Изменить данные", VkKeyboardColor.POSITIVE)
 
-            "name": "Не указано",
-            "age": "Не указано",
-            "birthday": "Не указано",
-            "timezone": "Не указано",
-            "pc": "Не указано",
+    return kb.get_keyboard()
 
-            "preds": 0,
-            "warns": 0,
-
-            "set_date": datetime.now().strftime("%d.%m.%Y"),
-            "raise_date": "Не указано",
-            "days_post": "Не указано",
-            "days_rank": "Не указано",
-
-            "norm_days": 0,
-            "inactive": 0,
-
-            "discord": "Не указано",
-            "forum": "Не указано",
-            "telegram": "Не указано",
-
-            "role": "Модератор",
-            "balls": 0,
-            "mutes": 0
-        }
-
-        save_data()
-
-# =======================
-# SMART ID
-# =======================
-def parse_user(raw):
-    raw = raw.strip()
-
-    raw = raw.replace("https://vk.com/", "")
-    raw = raw.replace("http://vk.com/", "")
-
-    if raw.startswith("id"):
-        raw = raw.replace("id", "")
-
-    if raw.isdigit():
-        return raw
-
-    try:
-        user = vk.users.get(user_ids=raw)[0]
-        return str(user["id"])
-    except:
-        return None
-
-# =======================
-# PROFILE
-# =======================
 def profile(uid):
-    uid = str(uid)
+    m = get_mod(uid)
 
-    if uid not in mods:
-        return "❌ Вас нет в составе."
+    if not m:
+        return "❌ Вы не являетесь модератором."
 
-    m = mods[uid]
+    return f"""
+📋 Профиль
 
-    return f"""📊 Личная статистика
+🆔 ID: {m[0]}
+🏷 Ник: {m[1]}
+🎖 Ранг: {m[2]}
+💰 Монеты: {m[3]}
+⚠ Преды: {m[4]}
+📛 Выговоры: {m[5]}
 
-◻ RP-Nickname: {m.get('nick', 'Не указано')}
-◻ Должность: {m.get('post', 'Не указано')}
-◻ Coins: {m.get('coins', 'Не указано')}
+👤 Имя: {m[6]}
+🎂 Возраст: {m[7]}
+📅 ДР: {m[8]}
+🌍 Часовой пояс: {m[9]}
+💻 ПК: {m[10]}
 
-📋 Личная информация
-
-◻ Имя: {m.get('name', 'Не указано')}
-◻ Возраст: {m.get('age', 'Не указано')}
-◻ Дата рождения: {m.get('birthday', 'Не указано')}
-◻ Часовой пояс: {m.get('timezone', 'Не указано')}
-◻ ПК (Да/Нет): {m.get('pc', 'Не указано')}
-
-🪪 Статистика модератора
-
-⛔ Предупреждения: {m.get('preds', 'Не указано')}
-⛔ Выговоры: {m.get('warns', 'Не указано')}
-
-◼ Поставлен: {m.get('set_date', 'Не указано')}
-◼ Последнее повышение: {m.get('raise_date', 'Не указано')}
-◼ Дней на посту: {m.get('days_post', 'Не указано')}
-◼ Дней на должности: {m.get('days_rank', 'Не указано')}
-
-✅ Дней выполненной нормы: {m.get('norm_days', 'Не указано')}
-❌ Количество неактивов: {m.get('inactive', 'Не указано')}
-
-⚠ Discord: {m.get('discord', 'Не указано')}
-⚠ Forum: {m.get('forum', 'Не указано')}
-⚠ Telegram: {m.get('telegram', 'Не указано')}
+💬 Discord: {m[11]}
+🌐 Forum: {m[12]}
+📱 Telegram: {m[13]}
 """
 
-print("V2.5 запущен")
+# =========================
+# START
+# =========================
 
-# =======================
+print("V3 SQLite запущен")
+
+# =========================
 # LOOP
-# =======================
+# =========================
+
 for event in longpoll.listen():
+
     if event.type == VkBotEventType.MESSAGE_NEW:
 
         msg = event.object.message["text"].strip()
         uid = event.object.message["from_id"]
         low = msg.lower()
 
+        # =====================
+        # STATES
+        # =====================
+
         if uid in states:
-            step = states[user_id]["step"]
+
+            step = states[uid]["step"]
 
             if step == "set_uid":
-                states[user_id]["uid"] = msg
-                states[user_id]["step"] = "set_field"
-                send(user_id, "Введите поле:")
+                states[uid]["target"] = int(msg)
+                states[uid]["step"] = "set_field"
+                send(uid, "Введите поле:")
                 continue
 
             elif step == "set_field":
-                states[user_id]["field"] = msg
-                states[user_id]["step"] = "set_value"
-                send(user_id, "Введите значение:")
+                states[uid]["field"] = msg
+                states[uid]["step"] = "set_value"
+                send(uid, "Введите значение:")
                 continue
 
             elif step == "set_value":
-                uid = states[user_id]["uid"]
-                field = states[user_id]["field"]
+                target = states[uid]["target"]
+                field = states[uid]["field"]
 
-                if uid in mods:
-                    mods[uid][field] = msg
-                    save_data()
-                    send(user_id, "✅ Данные изменены.", keyboard=admin_keyboard())
-            else:
-                send(user_id, "❌ Не найден.")
+                ok = update_field(target, field, msg)
 
-            del states[user_id]
-            continue
+                if ok:
+                    send(uid, "✅ Данные изменены.")
+                else:
+                    send(uid, "❌ Неверное поле.")
 
-        # ===================
+                del states[uid]
+                continue
+
+            elif step == "raise":
+                send(ADMIN_ID, f"📩 Заявка на повышение\n\nОт: {uid}\nПричина: {msg}")
+                send(uid, "✅ Заявка отправлена.")
+                del states[uid]
+                continue
+
+        # =====================
         # BUTTONS
-        # ===================
+        # =====================
+
         if low == "📋 профиль":
-            send(uid, profile(uid), menu(uid))
+            send(uid, profile(uid), menu())
             continue
 
         elif low == "📈 повышение":
-            states[uid] = "raise"
-            send(uid, "✍ Напишите причину заявки:", menu(uid))
+            states[uid] = {"step":"raise"}
+            send(uid, "✍ Напишите причину заявки:")
             continue
 
         elif low == "📷 доказательства":
-            send(uid, "📷 Отправьте фото с подписью.", menu(uid))
-            continue
-
-        elif low == "📝 отчёт":
-            states[uid] = "report"
-            send(uid, "✍ Напишите отчёт.", menu(uid))
-            continue
-
-        elif msg.lower() == "✏ изменить данные":
-            if not is_admin(uid):
-                send(uid, "❌ Нет доступа.")
-                continue
-
-            states[uid] = {"step":"set_uid"}
-
-            send(uid, "Введите ID пользователя:",
-                keyboard=admin_keyboard())
-            continue
-
-        elif low == "🏆 карьера":
-            send(uid,
-"""🏆 Карьера:
-
-1. Стажёр
-2. Модератор
-3. Старший модератор
-4. Куратор
-5. Руководство""",
-            menu(uid))
+            send(uid, "📷 Отправьте доказательства администрации.", menu())
             continue
 
         elif low == "👑 админка":
-            if is_admin(uid):
-                send(uid,
-"""👑 Админ-команды:
 
-/addmod ссылка ник
-/delmod ссылка
+            if not is_admin(uid):
+                continue
+
+            send(uid,
+"""👑 Админ-команды
+
+/addmod id nick
+/delmod id
 /mods
-/warn ссылка причина
-/addballs ссылка число
-/raise ссылка
-/set ссылка поле значение
-""",
-                menu(uid))
+/set
+""", admin_kb())
             continue
-        # ===================
-        # STATES
-        # ===================
-        if uid in states:
-            if states[uid] == "raise":
-                send(
-                    ADMIN_ID,
-                    f"📩 Заявка на повышение\n\n[id{uid}|Пользователь]\n📝 {msg}"
-                )
-                send(uid, "✅ Заявка отправлена.", menu(uid))
-                del states[uid]
+
+        elif low == "📄 список модеров":
+
+            if not is_admin(uid):
                 continue
 
-            elif states[uid] == "report":
-                send(
-                    ADMIN_ID,
-                    f"📝 Новый отчёт\n\n[id{uid}|Пользователь]\n📄 {msg}"
-                )
-                send(uid, "✅ Отчёт отправлен.", menu(uid))
-                del states[uid]
+            rows = get_all_mods()
+
+            text = "📄 Состав:\n\n"
+
+            for x in rows:
+                text += f"[id{x[0]}|{x[1]}] — {x[2]}\n"
+
+            send(uid, text, admin_kb())
+            continue
+
+        elif low == "✏ изменить данные":
+
+            if not is_admin(uid):
                 continue
 
-        # ===================
+            states[uid] = {"step":"set_uid"}
+            send(uid, "Введите ID пользователя:", admin_kb())
+            continue
+
+        # =====================
         # COMMANDS
-        # ===================
+        # =====================
+
         if not msg.startswith("/"):
             continue
 
@@ -355,118 +297,53 @@ for event in longpoll.listen():
         cmd = args[0].lower()
 
         if cmd == "/start":
-            send(uid, "✅ SMART PANEL активирован.", menu(uid))
-
-        elif cmd == "/mods":
-            if not is_admin(uid):
-                continue
-
-            text = "👥 Состав:\n\n"
-
-            for x in mods:
-                text += f"[id{x}|{mods[x]['nick']}]\n"
-
-            send(uid, text, menu(uid))
+            send(uid, "✅ Панель активирована.", menu())
 
         elif cmd == "/addmod":
+
             if not is_admin(uid):
                 continue
 
-            parts = msg.split(maxsplit=2)
-
-            if len(parts) < 3:
-                send(uid, "/addmod ссылка ник")
+            if len(args) < 3:
+                send(uid, "/addmod id nick")
                 continue
 
-            target = parse_user(parts[1])
-            nick = parts[2]
+            target = int(args[1])
+            nick = args[2]
 
-            if not target:
-                send(uid, "❌ Пользователь не найден.")
-                continue
+            add_mod(target, nick)
 
-            create_mod(target, nick)
-            send(uid, "✅ Добавлен.", menu(uid))
+            send(uid, "✅ Модератор добавлен.")
 
         elif cmd == "/delmod":
+
             if not is_admin(uid):
                 continue
 
             if len(args) < 2:
                 continue
 
-            target = parse_user(args[1])
+            target = int(args[1])
 
-            if target in mods:
-                del mods[target]
-                save_data()
-                send(uid, "✅ Удалён.", menu(uid))
+            del_mod(target)
 
-        elif cmd == "/warn":
-            if not is_admin(uid):
-                continue
+            send(uid, "✅ Модератор удалён.")
 
-            if len(args) < 3:
-                continue
+        elif cmd == "/mods":
 
-            target = parse_user(args[1])
+            rows = get_all_mods()
 
-            if target in mods:
-                mods[target]["warns"] += 1
-                save_data()
+            text = "📄 Состав:\n\n"
 
-                reason = " ".join(args[2:])
+            for x in rows:
+                text += f"[id{x[0]}|{x[1]}] — {x[2]}\n"
 
-                send(uid, "✅ Выговор выдан.", menu(uid))
-                send(
-                    int(target),
-                    f"⚠️ Вам выдан выговор.\nПричина: {reason}",
-                    menu(int(target))
-                )
-
-        elif cmd == "/addballs":
-            if not is_admin(uid):
-                continue
-
-            if len(args) < 3:
-                continue
-
-            target = parse_user(args[1])
-
-            if target in mods:
-                amount = int(args[2])
-                mods[target]["balls"] += amount
-                save_data()
-                send(uid, "✅ Баллы выданы.", menu(uid))
-
-        elif cmd == "/raise":
-            if not is_admin(uid):
-                continue
-
-            if len(args) < 2:
-                continue
-
-            target = parse_user(args[1])
-
-            if target in mods:
-                mods[target]["role"] = "Старший модератор"
-                save_data()
-
-                send(uid, "✅ Повышен.", menu(uid))
-                send(int(target), "🎉 Вас повысили!", menu(int(target)))
+            send(uid, text)
 
         elif cmd == "/set":
+
             if not is_admin(uid):
                 continue
 
-            if len(args) < 4:
-                continue
-
-            target = parse_user(args[1])
-            field = args[2]
-            value = " ".join(args[3:])
-
-            if target in mods and field in mods[target]:
-                mods[target][field] = value
-                save_data()
-                send(uid, "✅ Изменено.", menu(uid))
+            states[uid] = {"step":"set_uid"}
+            send(uid, "Введите ID пользователя:")
