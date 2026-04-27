@@ -52,7 +52,7 @@ def create_mod(uid):
     uid = str(uid)
     if uid not in mods:
         mods[uid] = {
-            "nick": f"id{uid}",
+            "nick": [id{uid}|{m['nick']}]
             "age": "18",
             "timezone": "МСК",
             "role": "Модератор",
