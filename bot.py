@@ -155,7 +155,7 @@ for event in longpoll.listen():
 
     args = msg.split(maxsplit=2)
 
-            if len(args) < 3:
+    if len(args) < 3:
         send(user_id, "Использование: /addmod ссылка_вк ник")
         continue
 
