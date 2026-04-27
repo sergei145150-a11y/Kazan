@@ -52,11 +52,11 @@ def create_mod(uid):
     uid = str(uid)
     if uid not in mods:
         mods[uid] = {
-            "nick": [id{uid}|{m['nick']}]
-            "age": "18",
-            "timezone": "МСК",
-            "role": "Модератор",
-            "post": "Не указана",
+            "nick": "Отсутствует.",
+            "age": "Отсутсвует.",
+            "timezone": "Отсуствует.",
+            "role": "Отсутствует",
+            "post": "Отсутствует",
             "set_date": datetime.now().strftime("%d.%m.%Y"),
             "raise_date": datetime.now().strftime("%d.%m.%Y"),
             "balls": 0,
@@ -79,7 +79,7 @@ def profile(uid):
 
     return f"""🎲 Статистика администратора
 
-🟩 Игровой Ник/VK: {m['nick']}
+🟩 Игровой Ник/VK: [id{uid}|{m['nick']}]
 🟩 Возраст: {m['age']}
 🟩 Часовой пояс: {m['timezone']}
 🟩 Уровень прав: {m['role']}
