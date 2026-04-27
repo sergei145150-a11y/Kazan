@@ -59,8 +59,7 @@ def send(uid, text):
         user_id=uid,
         message=text,
         random_id=random.randint(1, 999999999),
-        keyboard=get_keyboard(uid)
-    ) send(uid, text):
+        keyboard=get_keyboard(uid)) send(uid, text):
     vk.messages.send(
         user_id=uid,
         message=text,
