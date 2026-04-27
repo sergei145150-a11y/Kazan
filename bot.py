@@ -148,11 +148,15 @@ for event in longpoll.listen():
         # =====================
         # АДМИНКА
         # =====================
-        elif msg.startswith("/addmod") and sender == ADMIN_ID:
+elif cmd == "/addmod":
+    if not is_admin(user_id):
+        send(user_id, "❌ У вас нет доступа.")
+        continue
+
     args = msg.split(maxsplit=2)
 
     if len(args) < 3:
-        send(peer_id, "Используй: /addmod ссылка_вк ник")
+        send(user_id, "Использование: /addmod ссылка_вк ник")
         continue
 
     raw = args[1]
@@ -161,6 +165,16 @@ for event in longpoll.listen():
     uid = raw.replace("https://vk.com/id", "")
     uid = uid.replace("vk.com/id", "")
     uid = uid.replace("id", "")
+
+    if not uid.isdigit():
+        send(user_id, "❌ Неверная ссылка VK.")
+        continue
+
+    create_mod(uid)
+    mods[uid]["nick"] = nick
+    save_data(mods)
+
+    send(user_id, f"✅ Модератор {nick} добавлен.")
 
     if not uid.isdigit():
         send(peer_id, "❌ Неверная ссылка VK")
