@@ -191,7 +191,7 @@ for event in longpoll.listen():
         uid = event.object.message["from_id"]
         low = msg.lower()
 
-        if user_id in states:
+        if uid in states:
             step = states[user_id]["step"]
 
             if step == "set_uid":
