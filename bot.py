@@ -148,18 +148,43 @@ for event in longpoll.listen():
         # =====================
         # АДМИНКА
         # =====================
-        elif cmd == "/addmod":
-            if not is_admin(user_id):
-                send(user_id, "❌ У вас нет доступа.")
-                continue
+        elif msg.startswith("/addmod") and sender == ADMIN_ID:
+    args = msg.split(maxsplit=2)
 
-            if len(args) < 2:
-                send(user_id, "Использование: /addmod ID")
-                continue
+    if len(args) < 3:
+        send(peer_id, "Используй: /addmod ссылка_вк ник")
+        continue
 
-            uid = args[1]
-            create_mod(uid)
-            send(user_id, f"✅ Модератор {uid} добавлен.")
+    raw = args[1]
+    nick = args[2]
+
+    uid = raw.replace("https://vk.com/id", "")
+    uid = uid.replace("vk.com/id", "")
+    uid = uid.replace("id", "")
+
+    if not uid.isdigit():
+        send(peer_id, "❌ Неверная ссылка VK")
+        continue
+
+    mods[uid] = {
+        "nick": nick,
+        "age": "-",
+        "timezone": "-",
+        "role": "Модератор",
+        "post": "-",
+        "balls": 0,
+        "warns": 0,
+        "preds": 0,
+        "mutes": 0,
+        "inactive": 0,
+        "discord": "-",
+        "forum": "-",
+        "telegram": "-",
+        "raise_date": "-"
+    }
+
+    save_data(mods)
+    send(peer_id, f"✅ Модератор {nick} добавлен.")
 
         elif cmd == "/delmod":
             if not is_admin(user_id):
