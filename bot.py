@@ -1,24 +1,25 @@
-
 # bot.py
-# V3 SQLite VK Moderator Bot
+# V3 SQLite FULL VERSION
+# Старый профиль + поиск по id / ссылке / username / RP nick
 
 import vk_api
 import sqlite3
 import random
+
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
-# =========================
+# ==========================
 # CONFIG
-# =========================
+# ==========================
 
 TOKEN = "vk1.a.gvt4eMCrtK9Nfl_6mH_xFQA2MVuJYHFMabOi3q-eB6nGEXCZtDUi5LvyQQF0TBrKN7mfxkPtGSQxrTUlUTJk97CGYv0NwsahZx8Hv_MbSizZoMTmuwwrOEaisQBcZZnBLs5T-fgQNyf0oyWJDGRskMMZ3jPKvLx6bX05nekBoEU8EmaYpYVLoeWiYTFdm5_eUNBjndOzIYyejCR5QyJO2A"
 GROUP_ID = 238116016
 ADMIN_ID = 547053039
 
-# =========================
+# ==========================
 # DATABASE
-# =========================
+# ==========================
 
 db = sqlite3.connect("database.db", check_same_thread=False)
 sql = db.cursor()
@@ -44,23 +45,23 @@ CREATE TABLE IF NOT EXISTS moderators (
 
 db.commit()
 
-# =========================
-# VK
-# =========================
+# ==========================
+# VK INIT
+# ==========================
 
 vk_session = vk_api.VkApi(token=TOKEN)
 vk = vk_session.get_api()
 longpoll = VkBotLongPoll(vk_session, GROUP_ID)
 
-# =========================
+# ==========================
 # MEMORY
-# =========================
+# ==========================
 
 states = {}
 
-# =========================
+# ==========================
 # FUNCTIONS
-# =========================
+# ==========================
 
 def send(uid, text, keyboard=None):
     vk.messages.send(
@@ -73,17 +74,19 @@ def send(uid, text, keyboard=None):
 def is_admin(uid):
     return uid == ADMIN_ID
 
+# --------------------------
+
 def add_mod(uid, nick):
     sql.execute("""
     INSERT OR REPLACE INTO moderators
-    (uid, nick, rank, coins, warns, vigovors,
-    name, age, birthday, timezone, pc,
-    discord, forum, telegram)
+    (uid,nick,rank,coins,warns,vigovors,
+    name,age,birthday,timezone,pc,
+    discord,forum,telegram)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         uid,
         nick,
-        "Модератор",
+        "Стажёр",
         0,
         0,
         0,
@@ -111,20 +114,61 @@ def get_all_mods():
     return sql.fetchall()
 
 def update_field(uid, field, value):
-    allowed = [
+
+    allow = [
         "nick","rank","coins","warns","vigovors",
         "name","age","birthday","timezone","pc",
         "discord","forum","telegram"
     ]
 
-    if field not in allowed:
+    if field not in allow:
         return False
 
     sql.execute(f"UPDATE moderators SET {field}=? WHERE uid=?", (value, uid))
     db.commit()
     return True
 
+# --------------------------
+# ПОИСК ПОЛЬЗОВАТЕЛЯ
+# --------------------------
+
+def find_user(arg):
+
+    arg = arg.strip().lower()
+
+    if arg.isdigit():
+        return int(arg)
+
+    arg = arg.replace("https://", "")
+    arg = arg.replace("http://", "")
+    arg = arg.replace("vk.com/", "")
+    arg = arg.replace("/", "")
+
+    if arg.startswith("id") and arg[2:].isdigit():
+        return int(arg[2:])
+
+    try:
+        data = vk.users.get(user_ids=arg)
+
+        if data:
+            return data[0]["id"]
+    except:
+        pass
+
+    sql.execute("SELECT uid FROM moderators WHERE lower(nick)=?", (arg,))
+    row = sql.fetchone()
+
+    if row:
+        return row[0]
+
+    return None
+
+# --------------------------
+# KEYBOARDS
+# --------------------------
+
 def menu():
+
     kb = VkKeyboard(one_time=False)
 
     kb.add_button("📋 Профиль", VkKeyboardColor.PRIMARY)
@@ -138,6 +182,7 @@ def menu():
     return kb.get_keyboard()
 
 def admin_kb():
+
     kb = VkKeyboard(one_time=False)
 
     kb.add_button("📄 Список модеров", VkKeyboardColor.PRIMARY)
@@ -145,42 +190,57 @@ def admin_kb():
 
     return kb.get_keyboard()
 
+# --------------------------
+# PROFILE (старый стиль)
+# --------------------------
+
 def profile(uid):
+
     m = get_mod(uid)
 
     if not m:
         return "❌ Вы не являетесь модератором."
 
     return f"""
-📋 Профиль
+▪ RP-Nickname: {m[1]}
+▪ Должность: {m[2]}
+▪ Coins: {m[3]}
 
-🆔 ID: {m[0]}
-🏷 Ник: {m[1]}
-🎖 Ранг: {m[2]}
-💰 Монеты: {m[3]}
-⚠ Преды: {m[4]}
-📛 Выговоры: {m[5]}
+📋 Личная информация
 
-👤 Имя: {m[6]}
-🎂 Возраст: {m[7]}
-📅 ДР: {m[8]}
-🌍 Часовой пояс: {m[9]}
-💻 ПК: {m[10]}
+▪ Имя: {m[6]}
+▪ Возраст: {m[7]}
+▪ Дата рождения: {m[8]}
+▪ Часовой пояс: {m[9]}
+▪ ПК (Да/Нет): {m[10]}
 
-💬 Discord: {m[11]}
-🌐 Forum: {m[12]}
-📱 Telegram: {m[13]}
+🪪 Статистика модератора
+
+⛔ Предупреждения: {m[4]}
+⛔ Выговоры: {m[5]}
+
+▪ Поставлен: Не указано
+▪ Последнее повышение: Не указано
+▪ Дней на посту: 0
+▪ Дней на должности: 0
+
+✅ Дней выполненной нормы: 0
+❌ Количество неактивов: 0
+
+⚠ Discord: {m[11]}
+⚠ Forum: {m[12]}
+⚠ Telegram: {m[13]}
 """
 
-# =========================
+# ==========================
 # START
-# =========================
+# ==========================
 
 print("V3 SQLite запущен")
 
-# =========================
+# ==========================
 # LOOP
-# =========================
+# ==========================
 
 for event in longpoll.listen():
 
@@ -190,27 +250,49 @@ for event in longpoll.listen():
         uid = event.object.message["from_id"]
         low = msg.lower()
 
-        # =====================
+        # ======================
         # STATES
-        # =====================
+        # ======================
 
         if uid in states:
 
             step = states[uid]["step"]
 
-            if step == "set_uid":
-                states[uid]["target"] = int(msg)
+            if step == "raise":
+
+                send(
+                    ADMIN_ID,
+                    f"📩 Заявка на повышение\n\nОт: {uid}\nПричина: {msg}"
+                )
+
+                send(uid, "✅ Заявка отправлена.")
+                del states[uid]
+                continue
+
+            elif step == "set_uid":
+
+                target = find_user(msg)
+
+                if not target:
+                    send(uid, "❌ Пользователь не найден.")
+                    continue
+
+                states[uid]["target"] = target
                 states[uid]["step"] = "set_field"
+
                 send(uid, "Введите поле:")
                 continue
 
             elif step == "set_field":
+
                 states[uid]["field"] = msg
                 states[uid]["step"] = "set_value"
+
                 send(uid, "Введите значение:")
                 continue
 
             elif step == "set_value":
+
                 target = states[uid]["target"]
                 field = states[uid]["field"]
 
@@ -219,20 +301,14 @@ for event in longpoll.listen():
                 if ok:
                     send(uid, "✅ Данные изменены.")
                 else:
-                    send(uid, "❌ Неверное поле.")
+                    send(uid, "❌ Поле не найдено.")
 
                 del states[uid]
                 continue
 
-            elif step == "raise":
-                send(ADMIN_ID, f"📩 Заявка на повышение\n\nОт: {uid}\nПричина: {msg}")
-                send(uid, "✅ Заявка отправлена.")
-                del states[uid]
-                continue
-
-        # =====================
+        # ======================
         # BUTTONS
-        # =====================
+        # ======================
 
         if low == "📋 профиль":
             send(uid, profile(uid), menu())
@@ -255,8 +331,8 @@ for event in longpoll.listen():
             send(uid,
 """👑 Админ-команды
 
-/addmod id nick
-/delmod id
+/addmod ссылка ник
+/delmod ссылка
 /mods
 /set
 """, admin_kb())
@@ -283,12 +359,13 @@ for event in longpoll.listen():
                 continue
 
             states[uid] = {"step":"set_uid"}
-            send(uid, "Введите ID пользователя:", admin_kb())
+
+            send(uid, "Введите ссылку / ID / ник:", admin_kb())
             continue
 
-        # =====================
+        # ======================
         # COMMANDS
-        # =====================
+        # ======================
 
         if not msg.startswith("/"):
             continue
@@ -305,11 +382,16 @@ for event in longpoll.listen():
                 continue
 
             if len(args) < 3:
-                send(uid, "/addmod id nick")
+                send(uid, "/addmod ссылка ник")
                 continue
 
-            target = int(args[1])
-            nick = args[2]
+            target = find_user(args[1])
+
+            if not target:
+                send(uid, "❌ Пользователь не найден.")
+                continue
+
+            nick = " ".join(args[2:])
 
             add_mod(target, nick)
 
@@ -323,7 +405,11 @@ for event in longpoll.listen():
             if len(args) < 2:
                 continue
 
-            target = int(args[1])
+            target = find_user(args[1])
+
+            if not target:
+                send(uid, "❌ Пользователь не найден.")
+                continue
 
             del_mod(target)
 
@@ -346,4 +432,5 @@ for event in longpoll.listen():
                 continue
 
             states[uid] = {"step":"set_uid"}
-            send(uid, "Введите ID пользователя:")
+
+            send(uid, "Введите ссылку / ID / ник:")
