@@ -195,27 +195,27 @@ for event in longpoll.listen():
             step = states[user_id]["step"]
 
             if step == "set_uid":
-        states[user_id]["uid"] = msg
-        states[user_id]["step"] = "set_field"
-        send(user_id, "Введите поле:")
-        continue
+                states[user_id]["uid"] = msg
+                states[user_id]["step"] = "set_field"
+                send(user_id, "Введите поле:")
+                continue
 
             elif step == "set_field":
-        states[user_id]["field"] = msg
-        states[user_id]["step"] = "set_value"
-        send(user_id, "Введите значение:")
-        continue
+                states[user_id]["field"] = msg
+                states[user_id]["step"] = "set_value"
+                send(user_id, "Введите значение:")
+                continue
 
             elif step == "set_value":
-        uid = states[user_id]["uid"]
-        field = states[user_id]["field"]
+                uid = states[user_id]["uid"]
+                field = states[user_id]["field"]
 
                 if uid in mods:
-            mods[uid][field] = msg
-            save_data()
-            send(user_id, "✅ Данные изменены.", keyboard=admin_keyboard())
-                else:
-            send(user_id, "❌ Не найден.")
+                    mods[uid][field] = msg
+                    save_data()
+                    send(user_id, "✅ Данные изменены.", keyboard=admin_keyboard())
+            else:
+                send(user_id, "❌ Не найден.")
 
             del states[user_id]
             continue
