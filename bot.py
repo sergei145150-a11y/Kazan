@@ -67,20 +67,41 @@ def menu(uid):
 
     return kb.get_keyboard()
 
-def create_mod(uid, nick="Не указан"):
+def create_mod(uid, nick="Не указано"):
     uid = str(uid)
 
     if uid not in mods:
         mods[uid] = {
             "nick": nick,
+            "post": "Не указано",
+            "coins": "Не указано",
+
+            "name": "Не указано",
+            "age": "Не указано",
+            "birthday": "Не указано",
+            "timezone": "Не указано",
+            "pc": "Не указано",
+
+            "preds": 0,
+            "warns": 0,
+
+            "set_date": datetime.now().strftime("%d.%m.%Y"),
+            "raise_date": "Не указано",
+            "days_post": "Не указано",
+            "days_rank": "Не указано",
+
+            "norm_days": 0,
+            "inactive": 0,
+
+            "discord": "Не указано",
+            "forum": "Не указано",
+            "telegram": "Не указано",
+
             "role": "Модератор",
             "balls": 0,
-            "warns": 0,
-            "preds": 0,
-            "mutes": 0,
-            "inactive": 0,
-            "set_date": datetime.now().strftime("%d.%m.%Y")
+            "mutes": 0
         }
+
         save_data()
 
 # =======================
@@ -115,17 +136,36 @@ def profile(uid):
 
     m = mods[uid]
 
-    return f"""🎲 Профиль сотрудника
+    return f"""📊 Личная статистика
 
-🟩 Ник: [id{uid}|{m['nick']}]
-🟩 Должность: {m['role']}
+◻ RP-Nickname: {m.get('nick', 'Не указано')}
+◻ Должность: {m.get('post', 'Не указано')}
+◻ Coins: {m.get('coins', 'Не указано')}
 
-🟪 Баллы: {m['balls']}
-🟪 Выговоры: {m['warns']}
-🟪 Преды: {m['preds']}
-🟪 Муты: {m['mutes']}
+📋 Личная информация
 
-📅 Назначен: {m['set_date']}
+◻ Имя: {m.get('name', 'Не указано')}
+◻ Возраст: {m.get('age', 'Не указано')}
+◻ Дата рождения: {m.get('birthday', 'Не указано')}
+◻ Часовой пояс: {m.get('timezone', 'Не указано')}
+◻ ПК (Да/Нет): {m.get('pc', 'Не указано')}
+
+🪪 Статистика модератора
+
+⛔ Предупреждения: {m.get('preds', 'Не указано')}
+⛔ Выговоры: {m.get('warns', 'Не указано')}
+
+◼ Поставлен: {m.get('set_date', 'Не указано')}
+◼ Последнее повышение: {m.get('raise_date', 'Не указано')}
+◼ Дней на посту: {m.get('days_post', 'Не указано')}
+◼ Дней на должности: {m.get('days_rank', 'Не указано')}
+
+✅ Дней выполненной нормы: {m.get('norm_days', 'Не указано')}
+❌ Количество неактивов: {m.get('inactive', 'Не указано')}
+
+⚠ Discord: {m.get('discord', 'Не указано')}
+⚠ Forum: {m.get('forum', 'Не указано')}
+⚠ Telegram: {m.get('telegram', 'Не указано')}
 """
 
 print("V2.5 запущен")
