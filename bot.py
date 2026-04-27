@@ -43,10 +43,21 @@ def is_admin(uid):
 def send(uid, text, keyboard=None):
     vk.messages.send(
         user_id=uid,
+        random_id=random.randint(1,999999999),
         message=text,
-        random_id=random.randint(1, 999999999),
         keyboard=keyboard
     )
+def admin_keyboard():
+    kb = VkKeyboard(one_time=False)
+
+    kb.add_button("📋 Список модеров", color=VkKeyboardColor.PRIMARY)
+    kb.add_button("✏ Изменить данные", color=VkKeyboardColor.POSITIVE)
+
+    kb.add_line()
+
+    kb.add_button("👤 Профиль", color=VkKeyboardColor.SECONDARY)
+
+    return kb.get_keyboard()
 
 def menu(uid):
     kb = VkKeyboard(one_time=False)
@@ -180,6 +191,36 @@ for event in longpoll.listen():
         uid = event.object.message["from_id"]
         low = msg.lower()
 
+        if user_id in states:
+
+    step = states[user_id]["step"]
+
+        if step == "set_uid":
+        states[user_id]["uid"] = msg
+        states[user_id]["step"] = "set_field"
+        send(user_id, "Введите поле:")
+        continue
+
+        elif step == "set_field":
+        states[user_id]["field"] = msg
+        states[user_id]["step"] = "set_value"
+        send(user_id, "Введите значение:")
+        continue
+
+        elif step == "set_value":
+        uid = states[user_id]["uid"]
+        field = states[user_id]["field"]
+
+        if uid in mods:
+            mods[uid][field] = msg
+            save_data()
+            send(user_id, "✅ Данные изменены.", keyboard=admin_keyboard())
+        else:
+            send(user_id, "❌ Не найден.")
+
+        del states[user_id]
+        continue
+
         # ===================
         # BUTTONS
         # ===================
@@ -228,6 +269,18 @@ for event in longpoll.listen():
 """,
                 menu(uid))
             continue
+
+elif msg.lower() == "✏ изменить данные":
+
+    if not is_admin(uid):
+        send(uid, "❌ Нет доступа.")
+        continue
+
+    states[uid] = {"step":"set_uid"}
+
+    send(uid, "Введите ID пользователя:",
+         keyboard=admin_keyboard())
+    continue
 
         # ===================
         # STATES
