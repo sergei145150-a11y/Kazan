@@ -4,6 +4,7 @@ import json
 import os
 import random
 from datetime import datetime
+from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 # ==========================
 # НАСТРОЙКИ
@@ -38,7 +39,28 @@ mods = load_data()
 # ==========================
 # ФУНКЦИИ
 # ==========================
+def get_keyboard(uid):
+    keyboard = VkKeyboard(one_time=False)
+
+    keyboard.add_button("📋 Мой профиль", color=VkKeyboardColor.PRIMARY)
+    keyboard.add_button("🆔 Мой ID", color=VkKeyboardColor.SECONDARY)
+    keyboard.add_line()
+    keyboard.add_button("📘 Помощь", color=VkKeyboardColor.POSITIVE)
+
+    if is_admin(uid):
+        keyboard.add_line()
+        keyboard.add_button("👥 Модеры", color=VkKeyboardColor.PRIMARY)
+        keyboard.add_button("➕ Добавить", color=VkKeyboardColor.POSITIVE)
+
+    return keyboard.get_keyboard()
+
 def send(uid, text):
+    vk.messages.send(
+        user_id=uid,
+        message=text,
+        random_id=random.randint(1, 999999999),
+        keyboard=get_keyboard(uid)
+    ) send(uid, text):
     vk.messages.send(
         user_id=uid,
         message=text,
@@ -118,6 +140,30 @@ for event in longpoll.listen():
 
         args = msg.split()
         cmd = args[0].lower()
+        
+        if msg == "📋 Мой профиль":
+    send(user_id, profile(user_id))
+    continue
+
+elif msg == "🆔 Мой ID":
+    send(user_id, f"Ваш ID: {user_id}")
+    continue
+
+elif msg == "📘 Помощь":
+    send(user_id, "Команды: /profile /id /help")
+    continue
+
+elif msg == "👥 Модеры":
+    if is_admin(user_id):
+        text = "📋 Модераторы:\n\n"
+        for uid in mods:
+            text += f"{uid} — {mods[uid]['nick']}\n"
+        send(user_id, text)
+    continue
+
+elif msg == "➕ Добавить":
+    send(user_id, "Используй:\n/addmod ссылка ник")
+    continue
 
         # ==========================
         # ОБЩИЕ
