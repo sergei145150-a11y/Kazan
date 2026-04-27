@@ -241,6 +241,17 @@ for event in longpoll.listen():
             send(uid, "✍ Напишите отчёт.", menu(uid))
             continue
 
+        elif msg.lower() == "✏ изменить данные":
+            if not is_admin(uid):
+                send(uid, "❌ Нет доступа.")
+                continue
+
+            states[uid] = {"step":"set_uid"}
+
+            send(uid, "Введите ID пользователя:",
+                keyboard=admin_keyboard())
+            continue
+
         elif low == "🏆 карьера":
             send(uid,
 """🏆 Карьера:
@@ -268,19 +279,7 @@ for event in longpoll.listen():
 """,
                 menu(uid))
             continue
-
-elif msg.lower() == "✏ изменить данные":
-
-    if not is_admin(uid):
-        send(uid, "❌ Нет доступа.")
-        continue
-
-    states[uid] = {"step":"set_uid"}
-
-    send(uid, "Введите ID пользователя:",
-         keyboard=admin_keyboard())
-    continue
-
+з
         # ===================
         # STATES
         # ===================
