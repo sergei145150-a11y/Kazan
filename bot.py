@@ -79,15 +79,12 @@ def get_photos(event):
 
             for item in items:
                 if item["type"] == "photo":
-                    p = item["photo"]
+                    photo = item["photo"]
 
-                    owner = p["owner_id"]
-                    pid = p["id"]
+                    owner_id = photo["owner_id"]
+                    photo_id = photo["id"]
 
-                    if "access_key" in p:
-                        arr.append(f"photo{owner}_{pid}_{p['access_key']}")
-                    else:
-                        arr.append(f"photo{owner}_{pid}")
+                    arr.append(f"photo{owner_id}_{photo_id}")
 
         return ",".join(arr)
 
