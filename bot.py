@@ -131,17 +131,17 @@ if uid in states:
     except:
         pass
 
-    if action == "report":
-        for admin in ADMINS:
-            send(
-                admin,
-                f"📑 Новый отчёт\n\n👤 id{uid}\n📝 {msg}",
-                attachment=attachment
-            )
+            if action == "report":
+            for admin in ADMINS:
+                send(
+                    admin,
+                    f"📄 Новый отчёт\n\n👤 id{uid}\n📝 {msg}",
+                    attachment=attachment
+                )
 
-        send(peer_id, "✅ Отчёт отправлен.")
-        del states[uid]
-        continue
+            send(uid, "✅ Отчёт отправлен.")
+            del states[uid]
+            continue
 
     # =====================
     # COMMANDS
