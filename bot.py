@@ -76,26 +76,52 @@ def send_admins(text, attachment=None):
 # ==================================
 # PHOTO GETTER
 # ==================================
-def send_photos_separately(uid, text, photos_string):
-    if not photos_string:
-        send(uid, text)
-        return
-    
-    photos = photos_string.split(",")
-    # Отправляем первое сообщение с текстом и первой фоткой
-    vk.messages.send(
-        user_id=uid,
-        random_id=random.randint(1, 999999999),
-        message=text,
-        attachment=photos[0]
-    )
-    # Остальные фото отдельными сообщениями
-    for photo in photos[1:]:
-        vk.messages.send(
-            user_id=uid,
-            random_id=random.randint(1, 999999999),
-            attachment=photo
-        )
+def get_photos(msg):
+    arr = []
+
+    try:
+        # Основной источник
+        if "attachments" in msg:
+
+            for item in msg["attachments"]:
+
+                if item["type"] == "photo":
+                    p = item["photo"]
+
+                    owner = p["owner_id"]
+                    pid = p["id"]
+                    key = p.get("access_key")
+
+                    if key:
+                        arr.append(f"photo{owner}_{pid}_{key}")
+                    else:
+                        arr.append(f"photo{owner}_{pid}")
+
+        # Дополнительный источник (иногда VK кладёт сюда)
+        if "fwd_messages" in msg:
+            for fw in msg["fwd_messages"]:
+                if "attachments" in fw:
+                    for item in fw["attachments"]:
+                        if item["type"] == "photo":
+                            p = item["photo"]
+
+                            owner = p["owner_id"]
+                            pid = p["id"]
+                            key = p.get("access_key")
+
+                            if key:
+                                arr.append(f"photo{owner}_{pid}_{key}")
+                            else:
+                                arr.append(f"photo{owner}_{pid}")
+
+    except Exception as e:
+        print("PHOTO ERROR:", e)
+
+    # Убираем дубли, сохраняя порядок
+    arr = list(dict.fromkeys(arr))
+
+    # До 10 фото
+    return ",".join(arr[:10])
 
 # ==================================
 # KEYBOARDS
