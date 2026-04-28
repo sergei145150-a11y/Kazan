@@ -150,6 +150,8 @@ for event in longpoll.listen():
         continue
 
     uid = event.user_id
+    print(event.attachments)
+    print(event.__dict__)
     text = event.text.strip()
     low = text.lower()
 
