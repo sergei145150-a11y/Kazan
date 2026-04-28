@@ -291,39 +291,36 @@ for event in longpoll.listen():
     # ===================
 # MENU V2
 # ===================
+        if low == "🪪 статистика":
+            send(peer_id, profile(uid))
+            continue
 
-if low == "🪪 статистика":
-    send(peer_id, profile(uid))
-    continue
+        elif low == "🗃 заявления":
+            send(peer_id,
+            """🗃 Раздел заявлений:
 
-elif low == "🗃 заявления":
-    send(peer_id,
-"""🗃 Раздел заявлений:
+            📈 Повышение
+            📅 Неактив
+            Напиши нужный вариант.""")
+            continue
 
-📈 Повышение
-📅 Неактив
-🚪 Увольнение
+        elif low == "⚖ инструктаж":
+            send(peer_id,
+            """⚖ Полезные материалы:
 
-Напиши нужный вариант.""")
-    continue
+            • Правила модерации
+            • Команды модерации
+            • Наказания
+            • Жалобы
 
-elif low == "⚖ инструктаж":
-    send(peer_id,
-"""⚖ Полезные материалы:
+            Раздел в разработке.""")
+            continue
 
-• Правила модерации
-• Команды персонала
-• Наказания
-• Жалобы
-
-Раздел в разработке.""")
-    continue
-
-elif low == "🆘 sos":
-    send(peer_id,
-f"🆘 Вызов администрации!\n\nПользователь: id{uid}")
-    send(ADMIN_ID, f"🆘 SOS вызов от id{uid}")
-    continue
+        elif low == "🆘 sos":
+            send(peer_id,
+            f"🆘 Вызов администрации!\n\nПользователь: id{uid}")
+            send(ADMIN_ID, f"🆘 SOS вызов от id{uid}")
+            continue
 
     if not msg.startswith("/"):
         continue
