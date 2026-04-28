@@ -68,57 +68,26 @@ def send_admins(text, attachment=None):
 # ==================================
 # PHOTO GETTER
 # ==================================
-def get_photos(msg):
-    photos = []
+def send_photos_separately(uid, text, photos_string):
+    if not photos_string:
+        send(uid, text)
+        return
     
-    try:
-        def extract_photos(attachments):
-            """Извлекает фото из списка вложений"""
-            result = []
-            if not attachments:
-                return result
-                
-            for item in attachments:
-                if isinstance(item, dict) and item.get("type") == "photo":
-                    p = item.get("photo", {})
-                    owner = p.get("owner_id")
-                    pid = p.get("id")
-                    
-                    if owner is not None and pid is not None:
-                        key = p.get("access_key")
-                        if key:
-                            result.append(f"photo{owner}_{pid}_{key}")
-                        else:
-                            result.append(f"photo{owner}_{pid}")
-            return result
-        
-        # Основной источник
-        photos.extend(extract_photos(msg.get("attachments", [])))
-        
-        # Пересланные сообщения
-        for fw in msg.get("fwd_messages", []):
-            photos.extend(extract_photos(fw.get("attachments", [])))
-            
-            # Рекурсивно обрабатываем вложенные пересылки
-            if "fwd_messages" in fw:
-                nested_photos = get_photos(fw)
-                if nested_photos:
-                    photos.extend(nested_photos.split(","))
-    
-    except Exception as e:
-        print(f"PHOTO ERROR: {e}")
-        return ""
-    
-    # Удаляем дубликаты с сохранением порядка
-    seen = set()
-    unique_photos = []
-    for photo in photos:
-        if photo not in seen:
-            seen.add(photo)
-            unique_photos.append(photo)
-    
-    # Ограничиваем 10 фотографиями
-    return ",".join(unique_photos[:10])
+    photos = photos_string.split(",")
+    # Отправляем первое сообщение с текстом и первой фоткой
+    vk.messages.send(
+        user_id=uid,
+        random_id=random.randint(1, 999999999),
+        message=text,
+        attachment=photos[0]
+    )
+    # Остальные фото отдельными сообщениями
+    for photo in photos[1:]:
+        vk.messages.send(
+            user_id=uid,
+            random_id=random.randint(1, 999999999),
+            attachment=photo
+        )
 
 # ==================================
 # KEYBOARDS
