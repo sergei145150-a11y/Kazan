@@ -74,8 +74,17 @@ def get_photos(msg):
     try:
         for item in msg["attachments"]:
             if item["type"] == "photo":
-                photo = item["photo"]
-                arr.append(f'photo{photo["owner_id"]}_{photo["id"]}')
+                p = item["photo"]
+
+                owner = p["owner_id"]
+                pid = p["id"]
+                key = p.get("access_key")
+
+                if key:
+                    arr.append(f"photo{owner}_{pid}_{key}")
+                else:
+                    arr.append(f"photo{owner}_{pid}")
+
     except:
         pass
 
