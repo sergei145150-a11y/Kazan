@@ -117,18 +117,19 @@ for event in longpoll.listen():
         attachment = ""
 
         try:
-            atts = event.message_data["attachments"]
             arr = []
-
-            for a in atts:
-                if a["type"] == "photo":
-                    p = a["photo"]
-                    arr.append(f'photo{p["owner_id"]}_{p["id"]}')
-
+        
+            for i in range(1, 11):
+                tp = event.attachments.get(f"attach{i}_type")
+        
+                if tp == "photo":
+                    val = event.attachments.get(f"attach{i}")
+                    arr.append("photo" + val)
+        
             attachment = ",".join(arr)
-
+        
         except:
-            pass
+            attachment = ""
 
         # ОТЧЕТ
         if action == "report":
