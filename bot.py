@@ -2,13 +2,14 @@ import vk_api
 import sqlite3
 import random
 
-from vk_api.longpoll import VkLongPoll, VkEventType
+from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 # ==================================
 # CONFIG
 # ==================================
 TOKEN = "vk1.a.gvt4eMCrtK9Nfl_6mH_xFQA2MVuJYHFMabOi3q-eB6nGEXCZtDUi5LvyQQF0TBrKN7mfxkPtGSQxrTUlUTJk97CGYv0NwsahZx8Hv_MbSizZoMTmuwwrOEaisQBcZZnBLs5T-fgQNyf0oyWJDGRskMMZ3jPKvLx6bX05nekBoEU8EmaYpYVLoeWiYTFdm5_eUNBjndOzIYyejCR5QyJO2A"
+GROUP_ID = 123456789
 
 ADMINS = [674691524, 642009529, 547053039]
 
@@ -17,7 +18,7 @@ ADMINS = [674691524, 642009529, 547053039]
 # ==================================
 vk_session = vk_api.VkApi(token=TOKEN)
 vk = vk_session.get_api()
-longpoll = VkLongPoll(vk_session)
+longpoll = VkBotLongPoll(vk_session, GROUP_ID)
 
 # ==================================
 # DATABASE
@@ -67,26 +68,18 @@ def send_admins(text, attachment=None):
 # ==================================
 # PHOTO GETTER
 # ==================================
-def get_photos(event):
+def get_photos(msg):
     arr = []
 
     try:
-        raw = event.raw
-
-        for i in range(1, 11):
-            tp = raw.get(f"attach{i}_type")
-
-            if tp == "photo":
-                val = raw.get(f"attach{i}")
-                arr.append("photo" + val)
-
-        if arr:
-            return ",".join(arr)
-
+        for item in msg["attachments"]:
+            if item["type"] == "photo":
+                photo = item["photo"]
+                arr.append(f'photo{photo["owner_id"]}_{photo["id"]}')
     except:
         pass
 
-    return ""
+    return ",".join(arr)
 
 # ==================================
 # KEYBOARDS
@@ -124,21 +117,17 @@ def claims():
 # ==================================
 # START
 # ==================================
-send(547053039, "✅ BOT STARTED")
+print("BOT STARTED")
 
 for event in longpoll.listen():
 
-    if event.type != VkEventType.MESSAGE_NEW:
+    if event.type != VkBotEventType.MESSAGE_NEW:
         continue
 
-    if not event.to_me:
-        continue
+    msg = event.object["message"]
 
-    uid = event.user_id
-    send(674691524, f"📩 Новое сообщение от {uid}")
-    print(event.attachments)
-    print(event.__dict__)
-    text = event.text.strip()
+    uid = msg["from_id"]
+    text = msg["text"].strip()
     low = text.lower()
 
     reg(uid)
@@ -149,7 +138,7 @@ for event in longpoll.listen():
     if uid in states:
 
         action = states[uid]
-        attachment = get_photos(event)
+        attachment = get_photos(msg)
 
         if action == "report":
             send_admins(
@@ -208,16 +197,14 @@ for event in longpoll.listen():
         send(uid, "🗂 Раздел заявлений:", claims())
 
     elif low == "⚖ инструктаж":
-        send(
-            uid,
-            """⚖ Инструктаж:
+        send(uid,
+"""⚖ Инструктаж:
 
 • Соблюдать правила
 • Быть активным
 • Работать честно
 • Уважать состав""",
-            menu()
-        )
+        menu())
 
     elif low == "🆘 sos":
         send_admins(f"🆘 SOS вызов от id{uid}")
