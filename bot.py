@@ -289,13 +289,13 @@ for event in longpoll.listen():
             continue
 
     # ===================
-# MENU V2
-# ===================
-        if low == "🪪 статистика":
+    # MENU V2
+    # ===================
+    if low == "🪪 статистика":
             send(peer_id, profile(uid))
             continue
 
-        elif low == "🗃 заявления":
+    elif low == "🗃 заявления":
             send(peer_id,
             """🗃 Раздел заявлений:
 
@@ -304,7 +304,7 @@ for event in longpoll.listen():
             Напиши нужный вариант.""")
             continue
 
-        elif low == "⚖ инструктаж":
+    elif low == "⚖ инструктаж":
             send(peer_id,
             """⚖ Полезные материалы:
 
@@ -316,7 +316,7 @@ for event in longpoll.listen():
             Раздел в разработке.""")
             continue
 
-        elif low == "🆘 sos":
+    elif low == "🆘 sos":
             send(peer_id,
             f"🆘 Вызов администрации!\n\nПользователь: id{uid}")
             send(ADMIN_ID, f"🆘 SOS вызов от id{uid}")
