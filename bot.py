@@ -117,19 +117,23 @@ for event in longpoll.listen():
         attachment = ""
 
         try:
+            msg_id = event.message_id
+        
+            data = vk.messages.getById(message_ids=msg_id)
+        
+            items = data["items"][0]["attachments"]
+        
             arr = []
         
-            for i in range(1, 11):
-                tp = event.attachments.get(f"attach{i}_type")
-        
-                if tp == "photo":
-                    val = event.attachments.get(f"attach{i}")
-                    arr.append("photo" + val)
+            for item in items:
+                if item["type"] == "photo":
+                    p = item["photo"]
+                    arr.append(f'photo{p["owner_id"]}_{p["id"]}')
         
             attachment = ",".join(arr)
-        
-        except:
-            attachment = ""
+
+except Exception as e:
+    attachment = ""
 
         # ОТЧЕТ
         if action == "report":
