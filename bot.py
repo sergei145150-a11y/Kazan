@@ -108,42 +108,50 @@ for event in longpoll.listen():
     # =====================
     if uid in states:
 
-        action = states[uid]
+    action = states[uid]
 
-        attach = ""
-        try:
-            attach = ",".join(
-                f"{a.type}{a.owner_id}_{a.id}"
-                for a in event.attachments.values()
-            )
-        except:
-            pass
+    attachment = ""
 
-        if action == "report":
-            send_admins(
-                f"📑 Новый отчёт\n\n👤 id{uid}\n📝 {msg}",
-                attachment=attach
-            )
-            send(uid, "✅ Отчёт отправлен.", menu())
+    try:
+        atts = event.message_data["attachments"]
 
-        elif action == "inactive":
-            send_admins(f"🛩 Неактив\n\n👤 id{uid}\n📝 {msg}")
-            send(uid, "✅ Заявка отправлена.", menu())
+        arr = []
 
-        elif action == "raise":
-            send_admins(f"🔖 Повышение\n\n👤 id{uid}\n📝 {msg}")
-            send(uid, "✅ Заявка отправлена.", menu())
+        for a in atts:
+            if a["type"] == "photo":
+                p = a["photo"]
+                arr.append(f'photo{p["owner_id"]}_{p["id"]}')
 
-        elif action == "vig":
-            send_admins(f"🗂 Снятие выговора\n\n👤 id{uid}\n📝 {msg}")
-            send(uid, "✅ Заявка отправлена.", menu())
+        attachment = ",".join(arr)
 
-        elif action == "meeting":
-            send_admins(f"🔕 Пропуск собрания\n\n👤 id{uid}\n📝 {msg}")
-            send(uid, "✅ Заявка отправлена.", menu())
+    except:
+        pass
 
-        del states[uid]
-        continue
+    if action == "report":
+        send_admins(
+            f"📑 Новый отчёт\n\n👤 id{uid}\n📝 {msg}",
+            attachment=attachment
+        )
+        send(uid, "✅ Отчёт отправлен.", menu())
+
+    elif action == "inactive":
+        send_admins(f"🛩 Неактив\n\n👤 id{uid}\n📝 {msg}")
+        send(uid, "✅ Заявка отправлена.", menu())
+
+    elif action == "raise":
+        send_admins(f"🔖 Повышение\n\n👤 id{uid}\n📝 {msg}")
+        send(uid, "✅ Заявка отправлена.", menu())
+
+    elif action == "vig":
+        send_admins(f"🗂 Снятие выговора\n\n👤 id{uid}\n📝 {msg}")
+        send(uid, "✅ Заявка отправлена.", menu())
+
+    elif action == "meeting":
+        send_admins(f"🔕 Пропуск собрания\n\n👤 id{uid}\n📝 {msg}")
+        send(uid, "✅ Заявка отправлена.", menu())
+
+    del states[uid]
+    continue
 
     # =====================
     # COMMANDS
