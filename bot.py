@@ -256,9 +256,12 @@ def profile(uid):
 
 print("V3 SQLite запущен")
 
+
 # ==========================
 # LOOP
 # ==========================
+
+print("V3 SQLite запущен")
 
 for event in longpoll.listen():
     if event.type != VkBotEventType.MESSAGE_NEW:
@@ -307,73 +310,55 @@ for event in longpoll.listen():
             del states[uid]
             continue
 
-    # ===================
-# MENU V2
-# ===================
-        if low == "🪪 статистика":
-            send(peer_id, profile(uid))
-            continue
-
-        elif low == "🗃 заявления":
-            send(peer_id, "🗃 Раздел заявлений:", keyboard=statements_menu())
-            continue
-
-        elif low == "⚖ инструктаж":
-            send(peer_id,
-            """⚖ Полезные материалы:
-
-            • Правила модерации
-            • Команды модерации
-            • Наказания
-            • Жалобы
-
-            Раздел в разработке.""")
-            continue
-
-        elif low == "🔙 назад":
-            send(peer_id, "🔙 Главное меню.", keyboard=menu())
-            continue
-
-        elif low == "🆘 sos":
-            send(peer_id,
-            f"🆘 Вызов администрации!\n\nПользователь: id{uid}")
-            send(ADMIN_ID, f"🆘 SOS вызов от id{uid}")
-            continue
+    # MENU
+    if low == "🪪 статистика":
+        send(peer_id, profile(uid))
+        continue
+    elif low == "🗃 заявления":
+        send(peer_id, "🗃 Раздел заявлений:", keyboard=statements_menu())
+        continue
+    elif low == "⚖ инструктаж":
+        send(peer_id, "⚖ Полезные материалы:\n\n• Правила модерации\n• Команды модерации\n• Наказания\n• Жалобы\n\nРаздел в разработке.")
+        continue
+    elif low == "🔙 назад":
+        send(peer_id, "🔙 Главное меню.", keyboard=menu())
+        continue
+    elif low == "🆘 sos":
+        send(peer_id, f"🆘 Вызов администрации!\n\nПользователь: id{uid}")
+        send(ADMIN_ID, f"🆘 SOS вызов от id{uid}")
+        continue
+    elif low == "🔖 повышение":
+        states[uid]={"step":"raise"}
+        send(peer_id,"Введите причину повышения:")
+        continue
+    elif low in ["📑 отчёт","🛩 неактив","🗂 снятие выговора","🔕 пропуск собрания"]:
+        send(peer_id,"✍️ Напишите заявку текстом в свободной форме.")
+        continue
 
     if not msg.startswith("/"):
         continue
+
     args = msg.split()
     cmd = args[0].lower()
+
     if cmd == "/start":
         send(peer_id, "✅ Панель активирована.", menu())
-    elif cmd == "/addmod":
-        if not is_admin(uid): continue
-        if len(args) < 3:
-            send(peer_id, "/addmod ссылка ник")
-            continue
-        target = find_user(args[1])
-        if not target:
-            send(peer_id, "❌ Пользователь не найден.")
-            continue
-        nick = " ".join(args[2:])
-        add_mod(target, nick)
-        send(peer_id, "✅ Модератор добавлен.")
-    elif cmd == "/delmod":
-        if not is_admin(uid): continue
-        if len(args) < 2: continue
-        target = find_user(args[1])
-        if not target:
-            send(peer_id, "❌ Пользователь не найден.")
-            continue
-        del_mod(target)
-        send(peer_id, "✅ Модератор удалён.")
     elif cmd == "/mods":
         rows = get_all_mods()
-        text='📄 Состав\n\n'
+        text = '📄 Состав\n\n'
         for x in rows:
             text += f"[id{x[0]}|{x[1]}] — {x[2]}\n"
         send(peer_id, text)
-    elif cmd == "/set":
-        if is_admin(uid):
-            states[uid] = {"step":"set_uid"}
-            send(peer_id, "Введите ссылку / ID / ник:")
+    elif cmd == "/addmod" and is_admin(uid):
+        if len(args) >= 3:
+            target = find_user(args[1]); nick=" ".join(args[2:])
+            if target:
+                add_mod(target,nick); send(peer_id,"✅ Модератор добавлен.")
+    elif cmd == "/delmod" and is_admin(uid):
+        if len(args)>=2:
+            target=find_user(args[1])
+            if target:
+                del_mod(target); send(peer_id,"✅ Модератор удалён.")
+    elif cmd == "/set" and is_admin(uid):
+        states[uid]={"step":"set_uid"}
+        send(peer_id,"Введите ссылку / ID / ник:")
