@@ -63,7 +63,15 @@ def send(uid, text, keyboard=None, attachment=None):
 
 def send_admins(text, attachment=None):
     for admin in ADMINS:
-        send(admin, text, attachment=attachment)
+        # Сначала текст
+        send(admin, text)
+        # Потом все фото отдельным сообщением
+        if attachment:
+            vk.messages.send(
+                user_id=admin,
+                random_id=random.randint(1, 999999999),
+                attachment=attachment
+            )
 
 # ==================================
 # PHOTO GETTER
