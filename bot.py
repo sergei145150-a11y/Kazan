@@ -114,7 +114,6 @@ for event in longpoll.listen():
     if uid in states:
 
         action = states[uid]
-                action = states[uid]
         attachment = ""
 
         try:
