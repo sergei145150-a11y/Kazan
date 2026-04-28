@@ -85,10 +85,12 @@ def get_photos(msg):
                 else:
                     arr.append(f"photo{owner}_{pid}")
 
-    except:
-        pass
+        # максимум 10 фото (лимит VK на сообщение)
+        return ",".join(arr[:10])
 
-    return ",".join(arr)
+    except Exception as e:
+        print("PHOTO ERROR:", e)
+        return ""
 
 # ==================================
 # KEYBOARDS
