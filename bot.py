@@ -71,11 +71,13 @@ def get_photos(event):
     arr = []
 
     try:
+        raw = event.raw
+
         for i in range(1, 11):
-            tp = event.attachments.get(f"attach{i}_type")
+            tp = raw.get(f"attach{i}_type")
 
             if tp == "photo":
-                val = event.attachments.get(f"attach{i}")
+                val = raw.get(f"attach{i}")
                 arr.append("photo" + val)
 
         if arr:
@@ -84,23 +86,6 @@ def get_photos(event):
     except:
         pass
 
-    try:
-        data = vk.messages.getById(message_ids=event.message_id)
-
-        if data["items"]:
-            items = data["items"][0]["attachments"]
-
-            for item in items:
-                if item["type"] == "photo":
-                    p = item["photo"]
-                    arr.append(f'photo{p["owner_id"]}_{p["id"]}')
-
-        if arr:
-            return ",".join(arr)
-
-    except:
-        pass
-    send(674691524, "❌ Фото не найдено")
     return ""
 
 # ==================================
