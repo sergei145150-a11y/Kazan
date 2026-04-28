@@ -106,7 +106,11 @@ for event in longpoll.listen():
     # =====================
     # STATES
     # =====================
-    if uid in states:
+    # =====================
+# STATES
+# =====================
+
+if uid in states:
 
     action = states[uid]
 
@@ -128,30 +132,16 @@ for event in longpoll.listen():
         pass
 
     if action == "report":
-        send_admins(
-            f"📑 Новый отчёт\n\n👤 id{uid}\n📝 {msg}",
-            attachment=attachment
-        )
-        send(uid, "✅ Отчёт отправлен.", menu())
+        for admin in ADMINS:
+            send(
+                admin,
+                f"📑 Новый отчёт\n\n👤 id{uid}\n📝 {msg}",
+                attachment=attachment
+            )
 
-    elif action == "inactive":
-        send_admins(f"🛩 Неактив\n\n👤 id{uid}\n📝 {msg}")
-        send(uid, "✅ Заявка отправлена.", menu())
-
-    elif action == "raise":
-        send_admins(f"🔖 Повышение\n\n👤 id{uid}\n📝 {msg}")
-        send(uid, "✅ Заявка отправлена.", menu())
-
-    elif action == "vig":
-        send_admins(f"🗂 Снятие выговора\n\n👤 id{uid}\n📝 {msg}")
-        send(uid, "✅ Заявка отправлена.", menu())
-
-    elif action == "meeting":
-        send_admins(f"🔕 Пропуск собрания\n\n👤 id{uid}\n📝 {msg}")
-        send(uid, "✅ Заявка отправлена.", menu())
-
-    del states[uid]
-    continue
+        send(peer_id, "✅ Отчёт отправлен.")
+        del states[uid]
+        continue
 
     # =====================
     # COMMANDS
