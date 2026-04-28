@@ -168,16 +168,15 @@ def find_user(arg):
 # --------------------------
 
 def menu():
-
     kb = VkKeyboard(one_time=False)
 
-    kb.add_button("📋 Профиль", VkKeyboardColor.PRIMARY)
-    kb.add_button("📈 Повышение", VkKeyboardColor.POSITIVE)
+    kb.add_button("🪪 Статистика", VkKeyboardColor.PRIMARY)
+    kb.add_button("🗃 Заявления", VkKeyboardColor.POSITIVE)
 
     kb.add_line()
 
-    kb.add_button("📷 Доказательства", VkKeyboardColor.SECONDARY)
-    kb.add_button("👑 Админка", VkKeyboardColor.NEGATIVE)
+    kb.add_button("⚖ Инструктаж", VkKeyboardColor.SECONDARY)
+    kb.add_button("🆘 SOS", VkKeyboardColor.NEGATIVE)
 
     return kb.get_keyboard()
 
@@ -289,33 +288,42 @@ for event in longpoll.listen():
             del states[uid]
             continue
 
-    if low == "📋 профиль":
-        send(peer_id, profile(uid), menu())
-        continue
-    elif low == "📈 повышение":
-        states[uid] = {"step":"raise"}
-        send(peer_id, "✍ Напишите причину заявки:")
-        continue
-    elif low == "📷 доказательства":
-        send(peer_id, "📷 Отправьте доказательства администрации.", menu())
-        continue
-    elif low == "👑 админка":
-        if is_admin(uid):
-            send(peer_id, "👑 Админ-команды\n\n/addmod ссылка ник\n/delmod ссылка\n/mods\n/set", admin_kb())
-        continue
-    elif low == "📄 список модеров":
-        if is_admin(uid):
-            rows = get_all_mods()
-            text='📄 Состав\n\n'
-            for x in rows:
-                text += f"[id{x[0]}|{x[1]}] — {x[2]}\n"
-            send(peer_id, text, admin_kb())
-        continue
-    elif low == "✏ изменить данные":
-        if is_admin(uid):
-            states[uid] = {"step":"set_uid"}
-            send(peer_id, "Введите ссылку / ID / ник:", admin_kb())
-        continue
+    # ===================
+# MENU V2
+# ===================
+
+if low == "🪪 статистика":
+    send(peer_id, profile(uid))
+    continue
+
+elif low == "🗃 заявления":
+    send(peer_id,
+"""🗃 Раздел заявлений:
+
+📈 Повышение
+📅 Неактив
+🚪 Увольнение
+
+Напиши нужный вариант.""")
+    continue
+
+elif low == "⚖ инструктаж":
+    send(peer_id,
+"""⚖ Полезные материалы:
+
+• Правила модерации
+• Команды персонала
+• Наказания
+• Жалобы
+
+Раздел в разработке.""")
+    continue
+
+elif low == "🆘 sos":
+    send(peer_id,
+f"🆘 Вызов администрации!\n\nПользователь: id{uid}")
+    send(ADMIN_ID, f"🆘 SOS вызов от id{uid}")
+    continue
 
     if not msg.startswith("/"):
         continue
