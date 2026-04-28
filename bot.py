@@ -180,6 +180,25 @@ def menu():
 
     return kb.get_keyboard()
 
+
+def statements_menu():
+    kb = VkKeyboard(one_time=False)
+
+    kb.add_button("📑 Отчёт", VkKeyboardColor.PRIMARY)
+    kb.add_button("🛩 Неактив", VkKeyboardColor.SECONDARY)
+
+    kb.add_line()
+
+    kb.add_button("🔖 Повышение", VkKeyboardColor.POSITIVE)
+    kb.add_button("🗂 Снятие выговора", VkKeyboardColor.NEGATIVE)
+
+    kb.add_line()
+
+    kb.add_button("🔕 Пропуск собрания", VkKeyboardColor.SECONDARY)
+    kb.add_button("🔙 Назад", VkKeyboardColor.SECONDARY)
+
+    return kb.get_keyboard()
+
 def admin_kb():
 
     kb = VkKeyboard(one_time=False)
@@ -289,22 +308,17 @@ for event in longpoll.listen():
             continue
 
     # ===================
-    # MENU V2
-    # ===================
-    if low == "🪪 статистика":
+# MENU V2
+# ===================
+        if low == "🪪 статистика":
             send(peer_id, profile(uid))
             continue
 
-    elif low == "🗃 заявления":
-            send(peer_id,
-            """🗃 Раздел заявлений:
-
-            📈 Повышение
-            📅 Неактив
-            Напиши нужный вариант.""")
+        elif low == "🗃 заявления":
+            send(peer_id, "🗃 Раздел заявлений:", keyboard=statements_menu())
             continue
 
-    elif low == "⚖ инструктаж":
+        elif low == "⚖ инструктаж":
             send(peer_id,
             """⚖ Полезные материалы:
 
@@ -316,7 +330,11 @@ for event in longpoll.listen():
             Раздел в разработке.""")
             continue
 
-    elif low == "🆘 sos":
+        elif low == "🔙 назад":
+            send(peer_id, "🔙 Главное меню.", keyboard=menu())
+            continue
+
+        elif low == "🆘 sos":
             send(peer_id,
             f"🆘 Вызов администрации!\n\nПользователь: id{uid}")
             send(ADMIN_ID, f"🆘 SOS вызов от id{uid}")
