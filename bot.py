@@ -100,7 +100,7 @@ def get_photos(event):
 
     except:
         pass
-
+    send(674691524, "❌ Фото не найдено")
     return ""
 
 # ==================================
@@ -139,7 +139,7 @@ def claims():
 # ==================================
 # START
 # ==================================
-print("BOT STARTED")
+send(547053039, "✅ BOT STARTED")
 
 for event in longpoll.listen():
 
@@ -150,6 +150,7 @@ for event in longpoll.listen():
         continue
 
     uid = event.user_id
+    send(674691524, f"📩 Новое сообщение от {uid}")
     print(event.attachments)
     print(event.__dict__)
     text = event.text.strip()
