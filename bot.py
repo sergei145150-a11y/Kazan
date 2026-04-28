@@ -114,23 +114,27 @@ for event in longpoll.listen():
     if uid in states:
 
         action = states[uid]
+                action = states[uid]
         attachment = ""
 
         try:
             msg_id = event.message_id
-        
+
             data = vk.messages.getById(message_ids=msg_id)
-        
+
             items = data["items"][0]["attachments"]
-        
+
             arr = []
-        
+
             for item in items:
                 if item["type"] == "photo":
                     p = item["photo"]
                     arr.append(f'photo{p["owner_id"]}_{p["id"]}')
-        
+
             attachment = ",".join(arr)
+
+        except Exception:
+            attachment = ""
 
 except Exception as e:
     attachment = ""
@@ -141,7 +145,7 @@ except Exception as e:
             for admin in ADMINS:
                 send(
                     admin,
-                    f"📑 Новый отчёт\n\n👤 id{uid}\n📝 {text}",
+                    f"📑 Новый отчёт\n\n👤 id{uid}\n📝 {text if text else 'Без текста'}"
                     attachment=attachment
                 )
 
