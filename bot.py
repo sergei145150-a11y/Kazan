@@ -84,7 +84,12 @@ def get_photos(event):
                     owner_id = photo["owner_id"]
                     photo_id = photo["id"]
 
-                    arr.append(f"photo{owner_id}_{photo_id}")
+                    # если есть access_key
+                    if "access_key" in photo:
+                        access_key = photo["access_key"]
+                        arr.append(f"photo{owner_id}_{photo_id}_{access_key}")
+                    else:
+                        arr.append(f"photo{owner_id}_{photo_id}")
 
         return ",".join(arr)
 
