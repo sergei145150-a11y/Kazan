@@ -1,15 +1,12 @@
 import vk_api
+import json
 import random
-import sqlite3
-import time
-
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
-# ==================================
-# НАСТРОЙКИ
-# ==================================
-
+# =========================
+# CONFIG
+# =========================
 TOKEN = "vk1.a.gvt4eMCrtK9Nfl_6mH_xFQA2MVuJYHFMabOi3q-eB6nGEXCZtDUi5LvyQQF0TBrKN7mfxkPtGSQxrTUlUTJk97CGYv0NwsahZx8Hv_MbSizZoMTmuwwrOEaisQBcZZnBLs5T-fgQNyf0oyWJDGRskMMZ3jPKvLx6bX05nekBoEU8EmaYpYVLoeWiYTFdm5_eUNBjndOzIYyejCR5QyJO2A"
 
 ADMINS = [
@@ -18,83 +15,84 @@ ADMINS = [
     547053039
 ]
 
-# ==================================
-# VK
-# ==================================
-
+# =========================
+# VK INIT
+# =========================
 vk_session = vk_api.VkApi(token=TOKEN)
 vk = vk_session.get_api()
 longpoll = VkLongPoll(vk_session)
 
-# ==================================
-# БАЗА
-# ==================================
+# =========================
+# MEMORY
+# =========================
+states = {}
+users = {}
 
-db = sqlite3.connect("base.db", check_same_thread=False)
-sql = db.cursor()
-
-sql.execute("""
-CREATE TABLE IF NOT EXISTS users(
-id INTEGER,
-warns INTEGER,
-vigs INTEGER,
-coins INTEGER
-)
-""")
-db.commit()
-
-# ==================================
-# ФУНКЦИИ
-# ==================================
-
-def reg(uid):
-    user = sql.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
-    if user is None:
-        sql.execute(
-            "INSERT INTO users VALUES(?,?,?,?)",
-            (uid, 0, 0, 0)
-        )
-        db.commit()
-
-def get(uid):
-    return sql.execute(
-        "SELECT * FROM users WHERE id=?",
-        (uid,)
-    ).fetchone()
-
-def send(uid, text, keyboard=None, attachment=None):
+# =========================
+# HELPERS
+# =========================
+def send(user_id, text, keyboard=None, attachment=None):
     vk.messages.send(
-        user_id=uid,
+        user_id=user_id,
         message=text,
         random_id=random.randint(1, 999999999),
-        keyboard=keyboard,
+        keyboard=keyboard.get_keyboard() if keyboard else None,
         attachment=attachment
     )
 
+def reg(uid):
+    if uid not in users:
+        users[uid] = {
+            "warns": 0,
+            "reprimands": 0,
+            "coins": 0
+        }
+
+# =========================
+# KEYBOARDS
+# =========================
 def menu():
-    kb = VkKeyboard(one_time=False)
-
-    kb.add_button("🪪 Статистика", color=VkKeyboardColor.PRIMARY)
-    kb.add_button("🗃 Заявления", color=VkKeyboardColor.POSITIVE)
+    kb = VkKeyboard(resize=True)
+    kb.add_button("🪪 Статистика", VkKeyboardColor.PRIMARY)
+    kb.add_button("📂 Заявления", VkKeyboardColor.POSITIVE)
     kb.add_line()
+    kb.add_button("⚖ Инструктаж", VkKeyboardColor.SECONDARY)
+    kb.add_button("🆘 SOS", VkKeyboardColor.NEGATIVE)
+    return kb
 
-    kb.add_button("⚖ Инструктаж", color=VkKeyboardColor.SECONDARY)
-    kb.add_button("🆘 SOS", color=VkKeyboardColor.NEGATIVE)
+def claims_menu():
+    kb = VkKeyboard(resize=True)
+    kb.add_button("📑 Отчёт", VkKeyboardColor.PRIMARY)
+    kb.add_button("🛩 Неактив", VkKeyboardColor.SECONDARY)
+    kb.add_line()
+    kb.add_button("🔖 Повышение", VkKeyboardColor.POSITIVE)
+    kb.add_button("🗂 Снятие выговора", VkKeyboardColor.PRIMARY)
+    kb.add_line()
+    kb.add_button("🔕 Пропуск собрания", VkKeyboardColor.NEGATIVE)
+    kb.add_line()
+    kb.add_button("⬅ Назад", VkKeyboardColor.SECONDARY)
+    return kb
 
-    return kb.get_keyboard()
+# =========================
+# ATTACHMENTS
+# =========================
+def get_attachments(event):
+    try:
+        atts = event.message_data["attachments"]
+        arr = []
 
-# ==================================
-# STATES
-# ==================================
+        for a in atts:
+            if a["type"] == "photo":
+                p = a["photo"]
+                arr.append(f'photo{p["owner_id"]}_{p["id"]}')
 
-states = {}
+        return ",".join(arr)
+    except:
+        return ""
 
-# ==================================
-# START
-# ==================================
-
-print("BOT STARTED")
-
+# =========================
+# MAIN LOOP
+# =========================
 for event in longpoll.listen():
 
     if event.type != VkEventType.MESSAGE_NEW:
@@ -109,139 +107,110 @@ for event in longpoll.listen():
 
     reg(uid)
 
-    # ==================================
+    # =====================
     # STATES
-    # ==================================
-
+    # =====================
     if uid in states:
+
         action = states[uid]
+        attach = get_attachments(event)
 
-        attachment = ""
-
-        try:
-            atts = event.message_data["attachments"]
-            arr = []
-
-            for a in atts:
-                if a["type"] == "photo":
-                    p = a["photo"]
-                    arr.append(f'photo{p["owner_id"]}_{p["id"]}')
-
-            attachment = ",".join(arr)
-
-        except:
-            pass
-
-        # ОТЧЁТ
+        # REPORT
         if action == "report":
             for admin in ADMINS:
                 send(
                     admin,
-                    f"📄 Новый отчёт\n\n👤 id{uid}\n📝 {msg}",
-                    attachment=attachment
+                    f"📑 Новый отчёт\n\n👤 id{uid}\n📝 {msg}",
+                    attachment=attach
                 )
 
-            send(uid, "✅ Отчёт отправлен.")
+            send(uid, "✅ Отчёт отправлен.", menu())
             del states[uid]
             continue
 
-        # НЕАКТИВ
+        # INACTIVE
         if action == "inactive":
             for admin in ADMINS:
-                send(admin, f"🛩 Неактив\n\n👤 id{uid}\n📝 {msg}")
+                send(
+                    admin,
+                    f"🛩 Заявка на неактив\n\n👤 id{uid}\n📝 {msg}",
+                    attachment=attach
+                )
 
-            send(uid, "✅ Неактив отправлен.")
+            send(uid, "✅ Заявка отправлена.", menu())
             del states[uid]
             continue
 
-        # ПОВЫШЕНИЕ
-        if action == "up":
+        # PROMOTION
+        if action == "promo":
             for admin in ADMINS:
-                send(admin, f"🔖 Заявка на повышение\n\n👤 id{uid}\n📝 {msg}")
+                send(
+                    admin,
+                    f"🔖 Заявка на повышение\n\n👤 id{uid}\n📝 {msg}",
+                    attachment=attach
+                )
 
-            send(uid, "✅ Заявка отправлена.")
+            send(uid, "✅ Заявка отправлена.", menu())
             del states[uid]
             continue
 
-        # СНЯТИЕ ВЫГОВОРА
-        if action == "remove_vig":
+        # REMOVE REPRIMAND
+        if action == "remove":
             for admin in ADMINS:
-                send(admin, f"🗂 Снятие выговора\n\n👤 id{uid}\n📝 {msg}")
+                send(
+                    admin,
+                    f"🗂 Снятие выговора\n\n👤 id{uid}\n📝 {msg}",
+                    attachment=attach
+                )
 
-            send(uid, "✅ Заявка отправлена.")
+            send(uid, "✅ Заявка отправлена.", menu())
             del states[uid]
             continue
 
-        # ПРОПУСК СОБРАНИЯ
-        if action == "skip":
+        # MISS MEETING
+        if action == "meeting":
             for admin in ADMINS:
-                send(admin, f"🔕 Пропуск собрания\n\n👤 id{uid}\n📝 {msg}")
+                send(
+                    admin,
+                    f"🔕 Пропуск собрания\n\n👤 id{uid}\n📝 {msg}",
+                    attachment=attach
+                )
 
-            send(uid, "✅ Заявка отправлена.")
+            send(uid, "✅ Заявка отправлена.", menu())
             del states[uid]
             continue
 
-    # ==================================
-    # КОМАНДЫ
-    # ==================================
+    # =====================
+    # COMMANDS
+    # =====================
 
     if low == "/start":
         send(uid, "✅ Панель активирована.", menu())
         continue
 
     elif low == "🪪 статистика":
-        user = get(uid)
+        u = users[uid]
 
         send(
             uid,
             f"""🪪 Ваша статистика
 
 🆔 ID: {uid}
-⚠ Предупреждения: {user[1]}
-⛔ Выговоры: {user[2]}
-💰 Coins: {user[3]}""",
+⚠ Предупреждения: {u["warns"]}
+⛔ Выговоры: {u["reprimands"]}
+💰 Coins: {u["coins"]}""",
             menu()
         )
         continue
 
-    elif low == "🗃 заявления":
+    elif low == "📂 заявления":
         send(
             uid,
-            """🗃 Раздел заявлений:
+            """📂 Раздел заявлений:
 
-📑 Отчёт
-🛩 Неактив
-🔖 Повышение
-🗂 Снятие выговора
-🔕 Пропуск собрания
-
-Напиши нужный вариант."""
+Выберите нужный вариант ниже.""",
+            claims_menu()
         )
-        continue
-
-    elif low == "📑 отчёт":
-        states[uid] = "report"
-        send(uid, "📑 Отправь текст отчёта.\nМожно с фотографией.")
-        continue
-
-    elif low == "🛩 неактив":
-        states[uid] = "inactive"
-        send(uid, "🛩 Напиши причину неактива.")
-        continue
-
-    elif low == "🔖 повышение":
-        states[uid] = "up"
-        send(uid, "🔖 Напиши причину повышения.")
-        continue
-
-    elif low == "🗂 снятие выговора":
-        states[uid] = "remove_vig"
-        send(uid, "🗂 Напиши причину снятия выговора.")
-        continue
-
-    elif low == "🔕 пропуск собрания":
-        states[uid] = "skip"
-        send(uid, "🔕 Напиши причину пропуска собрания.")
         continue
 
     elif low == "⚖ инструктаж":
@@ -252,9 +221,7 @@ for event in longpoll.listen():
 • Правила модерации
 • Команды модерации
 • Жалобы
-• Наказания
-
-Раздел в разработке.""",
+• Наказания""",
             menu()
         )
         continue
@@ -263,5 +230,38 @@ for event in longpoll.listen():
         for admin in ADMINS:
             send(admin, f"🆘 SOS вызов от id{uid}")
 
-        send(uid, "🆘 Администрация уведомлена.", menu())
+        send(uid, "✅ Администрация уведомлена.", menu())
+        continue
+
+    # =====================
+    # CLAIM BUTTONS
+    # =====================
+
+    elif low == "📑 отчёт":
+        states[uid] = "report"
+        send(uid, "📑 Отправь текст отчёта.\nМожно с фотографией.")
+        continue
+
+    elif low == "🛩 неактив":
+        states[uid] = "inactive"
+        send(uid, "🛩 Напиши причину и срок неактива.")
+        continue
+
+    elif low == "🔖 повышение":
+        states[uid] = "promo"
+        send(uid, "🔖 Напиши причину повышения.")
+        continue
+
+    elif low == "🗂 снятие выговора":
+        states[uid] = "remove"
+        send(uid, "🗂 Напиши причину снятия выговора.")
+        continue
+
+    elif low == "🔕 пропуск собрания":
+        states[uid] = "meeting"
+        send(uid, "🔕 Напиши причину пропуска.")
+        continue
+
+    elif low == "⬅ назад":
+        send(uid, "⬅ Возврат в меню.", menu())
         continue
