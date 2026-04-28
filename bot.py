@@ -72,6 +72,7 @@ def get_photos(msg):
     arr = []
 
     try:
+        # Основной источник
         if "attachments" in msg:
 
             for item in msg["attachments"]:
@@ -88,11 +89,31 @@ def get_photos(msg):
                     else:
                         arr.append(f"photo{owner}_{pid}")
 
-        return ",".join(arr[:10])
+        # Дополнительный источник (иногда VK кладёт сюда)
+        if "fwd_messages" in msg:
+            for fw in msg["fwd_messages"]:
+                if "attachments" in fw:
+                    for item in fw["attachments"]:
+                        if item["type"] == "photo":
+                            p = item["photo"]
+
+                            owner = p["owner_id"]
+                            pid = p["id"]
+                            key = p.get("access_key")
+
+                            if key:
+                                arr.append(f"photo{owner}_{pid}_{key}")
+                            else:
+                                arr.append(f"photo{owner}_{pid}")
 
     except Exception as e:
         print("PHOTO ERROR:", e)
-        return ""
+
+    # Убираем дубли, сохраняя порядок
+    arr = list(dict.fromkeys(arr))
+
+    # До 10 фото
+    return ",".join(arr[:10])
 
 # ==================================
 # KEYBOARDS
