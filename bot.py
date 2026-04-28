@@ -68,30 +68,27 @@ def send_admins(text, attachment=None):
 # ==================================
 # PHOTO GETTER
 # ==================================
-def get_photos(event):
+def get_photos(msg):
     arr = []
 
     try:
-        data = vk.messages.getById(message_ids=event.message_id)
+        if "attachments" in msg:
 
-        if data["items"]:
-            items = data["items"][0]["attachments"]
+            for item in msg["attachments"]:
 
-            for item in items:
                 if item["type"] == "photo":
-                    photo = item["photo"]
+                    p = item["photo"]
 
-                    owner_id = photo["owner_id"]
-                    photo_id = photo["id"]
+                    owner = p["owner_id"]
+                    pid = p["id"]
+                    key = p.get("access_key")
 
-                    # если есть access_key
-                    if "access_key" in photo:
-                        access_key = photo["access_key"]
-                        arr.append(f"photo{owner_id}_{photo_id}_{access_key}")
+                    if key:
+                        arr.append(f"photo{owner}_{pid}_{key}")
                     else:
-                        arr.append(f"photo{owner_id}_{photo_id}")
+                        arr.append(f"photo{owner}_{pid}")
 
-        return ",".join(arr)
+        return ",".join(arr[:10])
 
     except Exception as e:
         print("PHOTO ERROR:", e)
