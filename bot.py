@@ -2,128 +2,206 @@ import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 import random
+import sqlite3
+import json
 
 TOKEN = "vk1.a.gvt4eMCrtK9Nfl_6mH_xFQA2MVuJYHFMabOi3q-eB6nGEXCZtDUi5LvyQQF0TBrKN7mfxkPtGSQxrTUlUTJk97CGYv0NwsahZx8Hv_MbSizZoMTmuwwrOEaisQBcZZnBLs5T-fgQNyf0oyWJDGRskMMZ3jPKvLx6bX05nekBoEU8EmaYpYVLoeWiYTFdm5_eUNBjndOzIYyejCR5QyJO2A"
 
 ADMINS = [674691524, 642009529, 547053039]
 
-vk = vk_api.VkApi(token=TOKEN)
-api = vk.get_api()
-longpoll = VkLongPoll(vk)
+vk_session = vk_api.VkApi(token=TOKEN)
+vk = vk_session.get_api()
+longpoll = VkLongPoll(vk_session)
 
 states = {}
 
-def send(user_id, text, keyboard=None):
-    api.messages.send(
-        user_id=user_id,
-        message=text,
+# =========================
+# DATABASE
+# =========================
+db = sqlite3.connect("base.db", check_same_thread=False)
+sql = db.cursor()
+
+sql.execute("""
+CREATE TABLE IF NOT EXISTS users(
+id INTEGER PRIMARY KEY,
+warns INTEGER DEFAULT 0,
+vigs INTEGER DEFAULT 0,
+coins INTEGER DEFAULT 0
+)
+""")
+db.commit()
+
+# =========================
+# FUNCTIONS
+# =========================
+def reg(uid):
+    sql.execute("INSERT OR IGNORE INTO users(id) VALUES(?)", (uid,))
+    db.commit()
+
+def get(uid):
+    reg(uid)
+    sql.execute("SELECT * FROM users WHERE id=?", (uid,))
+    return sql.fetchone()
+
+def send(uid, text, keyboard=None, attachment=None):
+    vk.messages.send(
+        user_id=uid,
         random_id=random.randint(1, 999999999),
-        keyboard=keyboard
+        message=text,
+        keyboard=keyboard,
+        attachment=attachment
     )
 
+def send_admins(text, attachment=None):
+    for admin in ADMINS:
+        send(admin, text, attachment=attachment)
+
+# =========================
+# KEYBOARDS
+# =========================
 def menu():
     kb = VkKeyboard(one_time=False)
+
     kb.add_button("🪪 Статистика", VkKeyboardColor.PRIMARY)
     kb.add_button("🗃 Заявления", VkKeyboardColor.POSITIVE)
     kb.add_line()
+
     kb.add_button("⚖ Инструктаж", VkKeyboardColor.SECONDARY)
     kb.add_button("🆘 SOS", VkKeyboardColor.NEGATIVE)
+
     return kb.get_keyboard()
 
-def apps_menu():
+def apps():
     kb = VkKeyboard(one_time=False)
+
     kb.add_button("📑 Отчёт", VkKeyboardColor.PRIMARY)
-    kb.add_button("🛩 Неактив", VkKeyboardColor.POSITIVE)
+    kb.add_button("🛩 Неактив", VkKeyboardColor.SECONDARY)
     kb.add_line()
-    kb.add_button("🔖 Повышение", VkKeyboardColor.PRIMARY)
-    kb.add_button("🗂 Снятие выговора", VkKeyboardColor.SECONDARY)
+
+    kb.add_button("🔖 Повышение", VkKeyboardColor.POSITIVE)
+    kb.add_button("🗂 Снятие выговора", VkKeyboardColor.NEGATIVE)
     kb.add_line()
-    kb.add_button("🔕 Пропуск собрания", VkKeyboardColor.NEGATIVE)
-    kb.add_line()
+
+    kb.add_button("🔕 Пропуск собрания", VkKeyboardColor.SECONDARY)
     kb.add_button("🔙 Назад", VkKeyboardColor.SECONDARY)
+
     return kb.get_keyboard()
 
-def send_to_admins(title, uid, text):
-    msg = f"{title}\n\n👤 Пользователь: id{uid}\n📝 Текст: {text}"
-    for admin in ADMINS:
-        send(admin, msg)
+print("Бот запущен.")
 
-print("Бот запущен")
-
+# =========================
+# LOOP
+# =========================
 for event in longpoll.listen():
-    if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-        uid = event.user_id
-        msg = event.text.strip()
-        low = msg.lower()
 
-        if uid in states:
-            action = states[uid]
+    if event.type != VkEventType.MESSAGE_NEW or not event.to_me:
+        continue
 
-            if action == "report":
-                send_to_admins("📑 Новый отчёт", uid, msg)
-                send(uid, "✅ Отчёт отправлен.", menu())
-            elif action == "inactive":
-                send_to_admins("🛩 Заявка на неактив", uid, msg)
-                send(uid, "✅ Заявка отправлена.", menu())
-            elif action == "raise":
-                send_to_admins("🔖 Заявка на повышение", uid, msg)
-                send(uid, "✅ Заявка отправлена.", menu())
-            elif action == "remove_warn":
-                send_to_admins("🗂 Снятие выговора", uid, msg)
-                send(uid, "✅ Заявка отправлена.", menu())
-            elif action == "skip":
-                send_to_admins("🔕 Пропуск собрания", uid, msg)
-                send(uid, "✅ Заявка отправлена.", menu())
+    uid = event.user_id
+    msg = event.text.strip()
+    low = msg.lower()
 
-            del states[uid]
-            continue
+    reg(uid)
 
-        if low == "/start":
-            send(uid, "✅ Панель активирована.", menu())
+    # =====================
+    # STATES
+    # =====================
+    if uid in states:
 
-        elif low == "🪪 статистика":
-            send(uid,
-                 f"🪪 Ваш профиль\n\n"
-                 f"ID: {uid}\n"
-                 f"Предупреждения: 0\n"
-                 f"Выговоры: 0",
-                 menu())
+        action = states[uid]
 
-        elif low == "🗃 заявления":
-            send(uid, "🗃 Раздел заявлений:", apps_menu())
+        attach = ""
+        try:
+            attach = ",".join(
+                f"{a.type}{a.owner_id}_{a.id}"
+                for a in event.attachments.values()
+            )
+        except:
+            pass
 
-        elif low == "⚖ инструктаж":
-            send(uid,
-                 "⚖ Полезные материалы:\n\n"
-                 "• Правила модерации\n"
-                 "• Команды модерации\n"
-                 "• Жалобы",
-                 menu())
+        if action == "report":
+            send_admins(
+                f"📑 Новый отчёт\n\n👤 id{uid}\n📝 {msg}",
+                attachment=attach
+            )
+            send(uid, "✅ Отчёт отправлен.", menu())
 
-        elif low == "🆘 sos":
-            for admin in ADMINS:
-                send(admin, f"🆘 SOS вызов от id{uid}")
-            send(uid, "✅ Администрация уведомлена.", menu())
+        elif action == "inactive":
+            send_admins(f"🛩 Неактив\n\n👤 id{uid}\n📝 {msg}")
+            send(uid, "✅ Заявка отправлена.", menu())
 
-        elif low == "📑 отчёт":
-            states[uid] = "report"
-            send(uid, "Введите текст отчёта:")
+        elif action == "raise":
+            send_admins(f"🔖 Повышение\n\n👤 id{uid}\n📝 {msg}")
+            send(uid, "✅ Заявка отправлена.", menu())
 
-        elif low == "🛩 неактив":
-            states[uid] = "inactive"
-            send(uid, "Введите причину неактива:")
+        elif action == "vig":
+            send_admins(f"🗂 Снятие выговора\n\n👤 id{uid}\n📝 {msg}")
+            send(uid, "✅ Заявка отправлена.", menu())
 
-        elif low == "🔖 повышение":
-            states[uid] = "raise"
-            send(uid, "Введите причину повышения:")
+        elif action == "meeting":
+            send_admins(f"🔕 Пропуск собрания\n\n👤 id{uid}\n📝 {msg}")
+            send(uid, "✅ Заявка отправлена.", menu())
 
-        elif low == "🗂 снятие выговора":
-            states[uid] = "remove_warn"
-            send(uid, "Введите причину снятия выговора:")
+        del states[uid]
+        continue
 
-        elif low == "🔕 пропуск собрания":
-            states[uid] = "skip"
-            send(uid, "Введите причину пропуска собрания:")
+    # =====================
+    # COMMANDS
+    # =====================
+    if low == "/start":
+        send(uid, "✅ Панель активирована.", menu())
 
-        elif low == "🔙 назад":
-            send(uid, "Главное меню", menu())
+    elif low == "🪪 статистика":
+        user = get(uid)
+
+        send(uid,
+f"""🪪 Ваша статистика
+
+🆔 ID: {uid}
+⚠ Предупреждения: {user[1]}
+⛔ Выговоры: {user[2]}
+💰 Coins: {user[3]}""",
+menu())
+
+    elif low == "🗃 заявления":
+        send(uid, "🗃 Раздел заявлений:", apps())
+
+    elif low == "⚖ инструктаж":
+        send(uid,
+"""⚖ Инструктаж:
+
+• Соблюдать правила
+• Быть активным
+• Выполнять норму
+• Следить за чатом""",
+menu())
+
+    elif low == "🆘 sos":
+        send_admins(f"🆘 SOS вызов от id{uid}")
+        send(uid, "✅ Руководство уведомлено.", menu())
+
+    # =====================
+    # APPLICATIONS
+    # =====================
+    elif low == "📑 отчёт":
+        states[uid] = "report"
+        send(uid, "📑 Отправьте текст отчёта и/или фото.")
+
+    elif low == "🛩 неактив":
+        states[uid] = "inactive"
+        send(uid, "🛩 Укажите причину неактива.")
+
+    elif low == "🔖 повышение":
+        states[uid] = "raise"
+        send(uid, "🔖 Почему вас должны повысить?")
+
+    elif low == "🗂 снятие выговора":
+        states[uid] = "vig"
+        send(uid, "🗂 Укажите причину снятия.")
+
+    elif low == "🔕 пропуск собрания":
+        states[uid] = "meeting"
+        send(uid, "🔕 Укажите причину пропуска.")
+
+    elif low == "🔙 назад":
+        send(uid, "🏠 Главное меню.", menu())
