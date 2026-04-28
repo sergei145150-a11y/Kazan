@@ -65,57 +65,76 @@ def send_admins(text, attachment=None):
         send(admin, text, attachment=attachment)
 
 # ==================================
+# PHOTO GETTER
+# ==================================
+def get_photos(event):
+    arr = []
+
+    try:
+        for i in range(1, 11):
+            tp = event.attachments.get(f"attach{i}_type")
+
+            if tp == "photo":
+                val = event.attachments.get(f"attach{i}")
+                arr.append("photo" + val)
+
+        if arr:
+            return ",".join(arr)
+
+    except:
+        pass
+
+    try:
+        data = vk.messages.getById(message_ids=event.message_id)
+
+        if data["items"]:
+            items = data["items"][0]["attachments"]
+
+            for item in items:
+                if item["type"] == "photo":
+                    p = item["photo"]
+                    arr.append(f'photo{p["owner_id"]}_{p["id"]}')
+
+        if arr:
+            return ",".join(arr)
+
+    except:
+        pass
+
+    return ""
+
+# ==================================
 # KEYBOARDS
 # ==================================
 def menu():
     kb = VkKeyboard(one_time=False)
 
-    kb.add_button("🪪 Статистика", color=VkKeyboardColor.PRIMARY)
-    kb.add_button("🗂 Заявления", color=VkKeyboardColor.POSITIVE)
+    kb.add_button("🪪 Статистика", VkKeyboardColor.PRIMARY)
+    kb.add_button("🗂 Заявления", VkKeyboardColor.POSITIVE)
     kb.add_line()
 
-    kb.add_button("⚖ Инструктаж", color=VkKeyboardColor.SECONDARY)
-    kb.add_button("🆘 SOS", color=VkKeyboardColor.NEGATIVE)
+    kb.add_button("⚖ Инструктаж", VkKeyboardColor.SECONDARY)
+    kb.add_button("🆘 SOS", VkKeyboardColor.NEGATIVE)
 
     return kb.get_keyboard()
 
 def claims():
     kb = VkKeyboard(one_time=False)
 
-    kb.add_button("📑 Отчёт", color=VkKeyboardColor.PRIMARY)
-    kb.add_button("🛩 Неактив", color=VkKeyboardColor.SECONDARY)
+    kb.add_button("📑 Отчёт", VkKeyboardColor.PRIMARY)
+    kb.add_button("🛩 Неактив", VkKeyboardColor.SECONDARY)
     kb.add_line()
 
-    kb.add_button("🔖 Повышение", color=VkKeyboardColor.POSITIVE)
-    kb.add_button("🗂 Снятие выговора", color=VkKeyboardColor.PRIMARY)
+    kb.add_button("🔖 Повышение", VkKeyboardColor.POSITIVE)
+    kb.add_button("🗂 Снятие выговора", VkKeyboardColor.PRIMARY)
     kb.add_line()
 
-    kb.add_button("🔕 Пропуск собрания", color=VkKeyboardColor.NEGATIVE)
+    kb.add_button("🔕 Пропуск собрания", VkKeyboardColor.NEGATIVE)
     kb.add_line()
 
-    kb.add_button("⬅ Назад", color=VkKeyboardColor.SECONDARY)
+    kb.add_button("⬅ Назад", VkKeyboardColor.SECONDARY)
 
     return kb.get_keyboard()
-
-# ==================================
-# PHOTO GETTER
-# ==================================
-def get_photos(msg_id):
-    try:
-        data = vk.messages.getById(message_ids=msg_id)
-        items = data["items"][0]["attachments"]
-
-        arr = []
-
-        for item in items:
-            if item["type"] == "photo":
-                p = item["photo"]
-                arr.append(f'photo{p["owner_id"]}_{p["id"]}')
-
-        return ",".join(arr)
-
-    except:
-        return ""
 
 # ==================================
 # START
@@ -142,47 +161,36 @@ for event in longpoll.listen():
     if uid in states:
 
         action = states[uid]
-        attachment = get_photos(event.message_id)
+        attachment = get_photos(event)
 
-        # REPORT
         if action == "report":
-
             send_admins(
                 f"📑 Новый отчёт\n\n👤 id{uid}\n📝 {text if text else 'Без текста'}",
                 attachment=attachment
             )
-
             send(uid, "✅ Отчёт отправлен.", menu())
             del states[uid]
             continue
 
-        # INACTIVE
         elif action == "inactive":
-
             send_admins(f"🛩 Неактив\n\n👤 id{uid}\n📝 {text}")
             send(uid, "✅ Заявка отправлена.", menu())
             del states[uid]
             continue
 
-        # PROMOTION
         elif action == "up":
-
             send_admins(f"🔖 Повышение\n\n👤 id{uid}\n📝 {text}")
             send(uid, "✅ Заявка отправлена.", menu())
             del states[uid]
             continue
 
-        # REMOVE VIG
         elif action == "vigoff":
-
             send_admins(f"🗂 Снятие выговора\n\n👤 id{uid}\n📝 {text}")
             send(uid, "✅ Заявка отправлена.", menu())
             del states[uid]
             continue
 
-        # SKIP
         elif action == "skip":
-
             send_admins(f"🔕 Пропуск собрания\n\n👤 id{uid}\n📝 {text}")
             send(uid, "✅ Заявка отправлена.", menu())
             del states[uid]
@@ -195,7 +203,6 @@ for event in longpoll.listen():
         send(uid, "✅ Панель активирована.", menu())
 
     elif low == "🪪 статистика":
-
         user = get(uid)
 
         send(
@@ -210,15 +217,9 @@ for event in longpoll.listen():
         )
 
     elif low == "🗂 заявления":
-
-        send(
-            uid,
-            "🗂 Раздел заявлений:",
-            claims()
-        )
+        send(uid, "🗂 Раздел заявлений:", claims())
 
     elif low == "⚖ инструктаж":
-
         send(
             uid,
             """⚖ Инструктаж:
@@ -231,7 +232,6 @@ for event in longpoll.listen():
         )
 
     elif low == "🆘 sos":
-
         send_admins(f"🆘 SOS вызов от id{uid}")
         send(uid, "✅ Руководство уведомлено.", menu())
 
