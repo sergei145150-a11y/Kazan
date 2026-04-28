@@ -131,7 +131,26 @@ if uid in states:
     except:
         pass
 
-            if action == "report":
+                if uid in states:
+        action = states[uid]
+
+        attachment = ""
+
+        try:
+            atts = event.message_data["attachments"]
+            arr = []
+
+            for a in atts:
+                if a["type"] == "photo":
+                    p = a["photo"]
+                    arr.append(f'photo{p["owner_id"]}_{p["id"]}')
+
+            attachment = ",".join(arr)
+
+        except:
+            pass
+
+        if action == "report":
             for admin in ADMINS:
                 send(
                     admin,
